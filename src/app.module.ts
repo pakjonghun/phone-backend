@@ -11,6 +11,7 @@ import { Purchase, PurchaseScheme } from 'src/scheme/purchase.scheme';
 import { Sale, SaleScheme } from 'src/scheme/sale.scheme';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './user/user.module';
+import { purchaseExcelMapper, saleExcelMapper, saleRank } from './constant';
 
 @Module({
   imports: [
@@ -39,7 +40,21 @@ import { UserModule } from './user/user.module';
     UserModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'saleExcelMapper',
+      useValue: saleExcelMapper,
+    },
+    {
+      provide: 'purchaseExcelMapper',
+      useValue: purchaseExcelMapper,
+    },
+    {
+      provide: 'saleRank',
+      useValue: saleRank,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

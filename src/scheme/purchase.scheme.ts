@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 import { Client } from './client.scheme';
 import { Product } from './product.scheme';
 
@@ -20,10 +20,10 @@ export class Purchase implements IPurchase {
   @Prop()
   price: number;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Client.name })
+  @Prop({ type: String, ref: Client.name })
   client: Client;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Client.name })
+  @Prop({ type: String, ref: Client.name })
   product: Product;
 }
 

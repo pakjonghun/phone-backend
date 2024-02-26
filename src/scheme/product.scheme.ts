@@ -2,8 +2,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export interface IProduct {
-  name: string;
-  price: number;
+  recentHighSalePrice: number;
+  recentLowPrice: number;
+  belowAverageCount: number;
 }
 
 export type ProductDocument = HydratedDocument<Product>;
@@ -11,10 +12,16 @@ export type ProductDocument = HydratedDocument<Product>;
 @Schema()
 export class Product implements IProduct {
   @Prop()
-  name: string;
+  _id: string;
 
-  @Prop()
-  price: number;
+  @Prop({ default: 0, type: Number })
+  recentHighSalePrice: number;
+
+  @Prop({ default: 0, type: Number })
+  recentLowPrice: number;
+
+  @Prop({ default: 0, type: Number })
+  belowAverageCount: number;
 }
 
 export const ProductSCheme = SchemaFactory.createForClass(Product);
