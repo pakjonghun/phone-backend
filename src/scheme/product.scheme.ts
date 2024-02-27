@@ -9,7 +9,7 @@ export interface IProduct {
 
 export type ProductDocument = HydratedDocument<Product>;
 
-@Schema()
+@Schema({ versionKey: false })
 export class Product implements IProduct {
   @Prop()
   _id: string;

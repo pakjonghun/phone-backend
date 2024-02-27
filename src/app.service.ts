@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sale } from './scheme/sale.scheme';
-import { Model, SortOrder } from 'mongoose';
+import { Model, PipelineStage, SortOrder } from 'mongoose';
 import { Product } from './scheme/product.scheme';
 import { Client } from './scheme/client.scheme';
 import { PurchaseExcelMapper, SaleExcelMapper, SaleRank } from './constant';
@@ -219,7 +219,7 @@ export class AppService {
     }
   }
 
-  async saleList({ keyword, length, page, sort }: SaleListDTO) {
+  async saleList({ keyword, length, page, sort = [] }: SaleListDTO) {
     const filter = {
       product: { $regex: keyword, $options: 'i' },
     };
@@ -227,27 +227,55 @@ export class AppService {
     const totalCount = await this.saleModel.countDocuments(filter);
     const hasNext = totalCount > page * length;
 
-    for await (const item of sort) {
-      const field = item[0];
-      const isFieldExist = this.saleModel.schema.path(field);
-      if (!isFieldExist) {
-        throw new BadRequestException(`${field} 는 존재하지 않는 필드 입니다.`);
-      }
-    }
-
     const sortList = sort.map((item) => {
       return [item[0], Number(item[1])];
     }) as [string, SortOrder][];
 
-    const data = await this.saleModel
-      .find(filter)
-      .populate({
-        path: 'product',
-        select: ['belowAverageCount', 'recentHighSalePrice', 'recentLowPrice'],
-      })
-      .limit(length)
-      .skip((page - 1) * length)
-      .sort(sortList);
+    const pipe: PipelineStage[] = [
+      {
+        $match: filter,
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+
+      {
+        $unwind: '$product',
+      },
+      {
+        $skip: (page - 1) * length,
+      },
+      {
+        $limit: length,
+      },
+    ];
+
+    if (sortList.length) {
+      const parseSortList = sortList.map(([sortKey, order]) => {
+        ['belowAverageCount', 'recentHighSalePrice', 'recentLowPrice'];
+        switch (sortKey) {
+          case 'belowAverageCount':
+          case 'recentHighSalePrice':
+          case 'recentLowPrice':
+            return [`product.${sortKey}`, order];
+
+          default:
+            return [sortKey, order];
+        }
+      });
+
+      const objectSortList = Object.fromEntries(parseSortList);
+      pipe.push({
+        $sort: objectSortList,
+      });
+    }
+
+    const data = await this.saleModel.aggregate(pipe);
 
     return {
       totalCount,

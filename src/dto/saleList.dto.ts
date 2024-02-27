@@ -4,6 +4,7 @@ import { Order } from 'src/common/type';
 import { IsOrderValid } from 'src/common/validation/order.validation';
 
 export class SaleListDTO {
+  @IsOptional()
   @IsArray()
   @IsArray({ each: true })
   @IsOrderValid()

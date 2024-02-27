@@ -12,7 +12,7 @@ export interface IPurchase {
 
 export type PurchaseDocument = HydratedDocument<Purchase>;
 
-@Schema()
+@Schema({ versionKey: false })
 export class Purchase implements IPurchase {
   @Prop()
   date: string;
