@@ -16,8 +16,13 @@ import {
   saleDownloadMapper,
   saleExcelMapper,
   saleRank,
+  saleRankReverse,
 } from './constant';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './common/interceptor/log.interceptor';
+import { ResponseInterceptor } from './common/interceptor/response.interceptor';
+import { AuthGuard } from './common/guard/auth.guard';
 
 @Module({
   imports: [
@@ -48,6 +53,18 @@ import { ScheduleModule } from '@nestjs/schedule';
   ],
   controllers: [AppController],
   providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
     AppService,
     {
       provide: 'saleExcelMapper',
@@ -64,6 +81,10 @@ import { ScheduleModule } from '@nestjs/schedule';
     {
       provide: 'saleDownloadMapper',
       useValue: saleDownloadMapper,
+    },
+    {
+      provide: 'saleRankReverse',
+      useValue: saleRankReverse,
     },
   ],
 })

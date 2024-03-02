@@ -23,6 +23,7 @@ import {
 import { SaleListDTO } from './dto/sale.list.dto';
 import { ConfirmSaleListDTO } from './dto/confirm.sale.dto';
 import { DownloadSaleDTO } from './dto/download.sale.dto';
+import { PurchaseListDTO } from './dto/purchase.list.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Controller()
@@ -69,6 +70,12 @@ export class AppController {
     return result;
   }
 
+  @Get('/purchase')
+  async purchaseList(@Query() query: PurchaseListDTO) {
+    const result = await this.appService.purchaseList(query);
+    return result;
+  }
+
   @Put('/sale')
   async saleConfirm(@Body() body: ConfirmSaleListDTO) {
     await this.appService.confirmSale(body.idList);
@@ -81,6 +88,6 @@ export class AppController {
 
   @Get('/sale/download')
   async downloadSale(@Query() query: DownloadSaleDTO) {
-    await this.appService.downloadSale(query.idList);
+    return this.appService.downloadSale(query.idList);
   }
 }

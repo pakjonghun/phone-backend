@@ -5,10 +5,12 @@ import { ISale, Sale } from './scheme/sale.scheme';
 
 export type PurchaseExcelMapper = Record<number, keyof IPurchase>;
 export const purchaseExcelMapper: PurchaseExcelMapper = {
-  1: 'date',
-  18: 'price',
-  3: 'client',
+  1: 'inDate',
+  3: 'inClient',
   6: 'product',
+  19: 'rank',
+  18: 'inPrice',
+  17: 'distanceLog',
 };
 
 export type SaleExcelMapper = Record<number, keyof ISale>;
@@ -52,17 +54,32 @@ export const saleRank: SaleRank[] = [
   'D-',
 ];
 
+export const saleRankReverse: Record<number, SaleRank> = {
+  [0]: 'A+',
+  [1]: 'A',
+  [2]: 'A-',
+  [3]: 'B+',
+  [4]: 'B',
+  [5]: 'B-',
+  [6]: 'C+',
+  [7]: 'C',
+  [8]: 'C-',
+  [9]: 'D+',
+  [10]: 'D',
+  [11]: 'D-',
+};
+
 export type SaleDownloadMapper = Column<
   keyof (Product &
     Pick<Sale, 'product' | 'distanceLog' | 'isConfirmed' | 'rank' | 'outPrice'>)
 >[];
 
 export const saleDownloadMapper: SaleDownloadMapper = [
-  { key: 'product', header: '펫네임' },
-  { key: 'rank', header: '등급' },
-  { key: 'distanceLog', header: '차감내역' },
-  { key: 'recentHighSalePrice', header: '최근 고가 판매가' },
-  { key: 'recentLowPrice', header: '최근 저가 판매가' },
-  { key: 'belowAverageCount', header: '평균 이하 판매수' },
-  { key: 'isConfirmed', header: '등급' },
+  { header: '펫네임', key: 'product' },
+  { header: '등급', key: 'rank' },
+  { header: '차감내역', key: 'distanceLog' },
+  { header: '최근 고가 판매가', key: 'recentHighSalePrice' },
+  { header: '최근 저가 판매가', key: 'recentLowPrice' },
+  { header: '평균 이하 판매수', key: 'belowAverageCount' },
+  { header: '관리자 승인여부', key: 'isConfirmed' },
 ];

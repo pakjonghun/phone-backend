@@ -4,27 +4,47 @@ import { Client } from './client.scheme';
 import { Product } from './product.scheme';
 
 export interface IPurchase {
-  date: string;
-  price: number;
-  client: Client;
+  inDate: string;
+  isConfirmed: boolean;
+  rank: number;
+  distanceLog: string | null;
+  inClient: Client;
   product: Product;
+  inPrice: number;
 }
 
-export type PurchaseDocument = HydratedDocument<Purchase>;
+export type SaleDocument = HydratedDocument<IPurchase>;
 
-@Schema({ versionKey: false })
+@Schema({ timestamps: true })
 export class Purchase implements IPurchase {
-  @Prop()
-  date: string;
+  @Prop({ type: String, isRequired: true })
+  inDate: string;
 
-  @Prop()
-  price: number;
+  @Prop({ type: Boolean, isRequired: true })
+  isConfirmed: boolean;
 
-  @Prop({ type: String, ref: Client.name })
-  client: Client;
+  @Prop({ type: Number, isRequired: true })
+  rank: number;
 
-  @Prop({ type: String, ref: Client.name })
+  @Prop({ type: String, isRequired: false, default: null })
+  distanceLog: string | null;
+
+  @Prop({
+    type: String,
+    ref: Client.name,
+    isRequired: true,
+  })
+  inClient: Client;
+
+  @Prop({
+    type: String,
+    ref: Product.name,
+    isRequired: true,
+  })
   product: Product;
+
+  @Prop({ type: Number, required: true })
+  inPrice: number;
 }
 
 export const PurchaseScheme = SchemaFactory.createForClass(Purchase);

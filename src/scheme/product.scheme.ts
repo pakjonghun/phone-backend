@@ -5,6 +5,9 @@ export interface IProduct {
   recentHighSalePrice: number;
   recentLowPrice: number;
   belowAverageCount: number;
+  recentHighPurchasePrice: number;
+  recentLowPurchasePrice: number;
+  belowAveragePurchaseCount: number;
 }
 
 export type ProductDocument = HydratedDocument<Product>;
@@ -13,6 +16,15 @@ export type ProductDocument = HydratedDocument<Product>;
 export class Product implements IProduct {
   @Prop()
   _id: string;
+
+  @Prop({ default: 0, type: Number })
+  recentHighPurchasePrice: number;
+
+  @Prop({ default: 0, type: Number })
+  recentLowPurchasePrice: number;
+
+  @Prop({ default: 0, type: Number })
+  belowAveragePurchaseCount: number;
 
   @Prop({ default: 0, type: Number })
   recentHighSalePrice: number;

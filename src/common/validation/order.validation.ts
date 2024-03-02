@@ -49,7 +49,13 @@ type SaleSortKey = Pick<
   ISale,
   'product' | 'isConfirmed' | 'rank' | 'distanceLog'
 > &
-  Omit<IProduct, '_id'>;
+  Omit<
+    IProduct,
+    | '_id'
+    | 'recentHighPurchasePrice'
+    | 'recentLowPurchasePrice'
+    | 'belowAveragePurchaseCount'
+  >;
 
 const saleSortKey: Record<keyof SaleSortKey, number> = {
   product: 1,
@@ -82,6 +88,50 @@ export function IsSortKeyValid(validationOptions?: ValidationOptions) {
       options: validationOptions,
       constraints: [],
       validator: IsSortKeyValidConstraint,
+    });
+  };
+}
+
+type PurchaseSortKey = Pick<
+  ISale,
+  'product' | 'isConfirmed' | 'rank' | 'distanceLog'
+> &
+  Omit<
+    IProduct,
+    '_id' | 'recentHighSalePrice' | 'recentLowPrice' | 'belowAverageCount'
+  >;
+
+const purchaseSortKey: Record<keyof PurchaseSortKey, number> = {
+  recentHighPurchasePrice: 1,
+  recentLowPurchasePrice: 1,
+  belowAveragePurchaseCount: 1,
+  product: 1,
+  distanceLog: 1,
+  isConfirmed: 1,
+  rank: 1,
+};
+
+@ValidatorConstraint({ async: false })
+class IsPurchaseKeyValidConstraint implements ValidatorConstraintInterface {
+  validate(propertyValue: [string, string][]) {
+    return propertyValue.every(([key]) => {
+      return !!purchaseSortKey[key];
+    });
+  }
+
+  defaultMessage() {
+    return '잘못된 정렬 키 입니다.';
+  }
+}
+
+export function IsPurchaseKeyValid(validationOptions?: ValidationOptions) {
+  return function (object: any, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      constraints: [],
+      validator: IsPurchaseKeyValidConstraint,
     });
   };
 }

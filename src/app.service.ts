@@ -18,6 +18,7 @@ import { Purchase } from './scheme/purchase.scheme';
 import { SaleListDTO } from './dto/sale.list.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
+import { PurchaseListDTO } from './dto/purchase.list.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Injectable()
@@ -27,6 +28,9 @@ export class AppService {
     @InjectModel(Product.name) private productModel: Model<Product>,
     @InjectModel(Client.name) private clientModel: Model<Client>,
     @InjectModel(Purchase.name) private purchaseModel: Model<Purchase>,
+
+    @Inject('saleRankReverse')
+    private saleRankReverse: Record<number, SaleRank>,
     @Inject('saleExcelMapper') private saleExcelMapper: SaleExcelMapper,
     @Inject('saleRank') private saleRank: SaleRank[],
     @Inject('saleDownloadMapper')
@@ -66,14 +70,47 @@ export class AppService {
           let value =
             typeof cell.value == 'string' ? cell.value.trim() : cell.value;
           if (fieldName.toLowerCase().includes('date')) {
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다.`,
+              );
+            }
+
             value = Util.GetDateString(value.toString());
           }
 
           if (fieldName === 'product') {
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다.`,
+              );
+            }
             const modelNumber = value as string;
             productSet.add(modelNumber);
           }
 
+          if (fieldName.toLowerCase().includes('client')) {
+            clientSet.add(value as string);
+          }
+
+          if (fieldName === 'rank') {
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
+              );
+            }
+
+            const rank = this.saleRank.findIndex((item) =>
+              value.toString().toUpperCase().includes(item),
+            );
+            if (rank !== -1) {
+              value = rank;
+            } else {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
+              );
+            }
+          }
           newPurchase[fieldName as string] = value;
           const isValid = newPurchase.$isValid(fieldName);
 
@@ -121,6 +158,8 @@ export class AppService {
 
       break;
     }
+
+    await this.unlinkExcelFile(uploadFile.path);
   }
 
   async uploadSale(uploadFile: Express.Multer.File) {
@@ -323,56 +362,158 @@ export class AppService {
     };
   }
 
+  async purchaseList({
+    keyword,
+    length,
+    page,
+    sort = [['updatedAt', -1]],
+  }: PurchaseListDTO) {
+    const filter = {
+      product: { $regex: keyword, $options: 'i' },
+    };
+
+    const totalCount = await this.purchaseModel.countDocuments(filter);
+    const hasNext = totalCount > page * length;
+
+    const sortList = sort.map((item) => {
+      return [item[0], Number(item[1])];
+    }) as [string, SortOrder][];
+
+    const pipe: PipelineStage[] = [
+      {
+        $match: filter,
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+
+      {
+        $unwind: '$product',
+      },
+      {
+        $skip: (page - 1) * length,
+      },
+      {
+        $limit: length,
+      },
+      {
+        $project: {
+          distanceLog: 1,
+          isConfirmed: 1,
+          product: 1,
+          rank: 1,
+          _id: 1,
+        },
+      },
+    ];
+
+    if (sortList.length) {
+      const parseSortList = sortList.map(([sortKey, order]) => {
+        switch (sortKey) {
+          case 'recentHighPurchasePrice':
+          case 'recentLowPurchasePrice':
+          case 'belowAveragePurchaseCount':
+            return [`product.${sortKey}`, order];
+
+          default:
+            return [sortKey, order];
+        }
+      });
+
+      const objectSortList = Object.fromEntries(parseSortList);
+      const skipIndex = Object.keys(pipe).findIndex((item) => item === '$skip');
+      pipe.splice(skipIndex, 0, { $sort: objectSortList });
+    }
+
+    const data = await this.purchaseModel.aggregate(pipe);
+
+    return {
+      totalCount,
+      hasNext,
+      data,
+    };
+  }
+
   async downloadSale(idList: string[]) {
+    type Result = {
+      distanceLog: 1;
+      product: string;
+      rank: number;
+      recentHighSalePrice: number;
+      recentLowPrice: number;
+      belowAverageCount: number;
+      isConfirmed: boolean;
+    };
+
     const objectIds = idList.map((id) => new ObjectId(id));
-    const stream = this.saleModel
-      .aggregate([
-        {
-          $match: { _id: { $in: objectIds } },
+    const stream = await this.saleModel.aggregate<Result>([
+      {
+        $match: { _id: { $in: objectIds } },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          foreignField: '_id',
+          localField: 'product',
+          as: 'product',
         },
-        {
-          $lookup: {
-            from: 'products',
-            foreignField: '_id',
-            localField: 'product',
-            as: 'product',
-          },
+      },
+      {
+        $unwind: '$product',
+      },
+      {
+        $addFields: {
+          product: '$product._id',
+          recentHighSalePrice: '$product.recentHighSalePrice',
+          recentLowPrice: '$product.recentLowPrice',
+          belowAverageCount: '$product.belowAverageCount',
         },
-        {
-          $unwind: '$product',
+      },
+      {
+        $project: {
+          _id: 0,
+          distanceLog: 1,
+          product: 1,
+          rank: 1,
+          recentHighSalePrice: 1,
+          recentLowPrice: 1,
+          belowAverageCount: 1,
+          isConfirmed: 1,
         },
-        {
-          $addFields: {
-            product: '$product._id',
-            recentHighSalePrice: '$product.recentHighSalePrice',
-            recentLowPrice: '$product.recentLowPrice',
-            belowAverageCount: '$product.belowAverageCount',
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            distanceLog: 1,
-            product: 1,
-            rank: 1,
-            recentHighSalePrice: 1,
-            recentLowPrice: 1,
-            belowAverageCount: 1,
-            isConfirmed: 1,
-          },
-        },
-      ])
-      .cursor();
+      },
+    ]);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
-    worksheet.columns = this.saleDownloadMapper;
+
+    worksheet.columns = [
+      { header: '펫네임', key: 'product' },
+      { header: '등급', key: 'rank' },
+      { header: '차감내역', key: 'distanceLog' },
+      { header: '최근 고가 판매가', key: 'recentHighSalePrice' },
+      { header: '최근 저가 판매가', key: 'recentLowPrice' },
+      { header: '평균 이하 판매수', key: 'belowAverageCount' },
+      { header: '관리자 승인여부', key: 'isConfirmed' },
+    ];
 
     for await (const doc of stream) {
-      worksheet.addRow(doc);
-    }
+      const newDoc = {
+        product: doc.product,
+        rank: this.saleRankReverse[doc.rank] ?? '',
+        distanceLog: doc.distanceLog ?? '',
+        recentHighSalePrice: doc.recentHighSalePrice,
+        recentLowPrice: doc.recentLowPrice,
+        belowAverageCount: doc.belowAverageCount,
+        isConfirmed: doc.isConfirmed ? '승인대기' : '승인완료',
+      };
 
-    await stream.close();
+      worksheet.addRow(newDoc);
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     return buffer;
