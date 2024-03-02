@@ -584,13 +584,73 @@ export class AppService {
         $merge: {
           into: 'products',
           on: '_id',
-          whenMatched: 'replace',
+          whenMatched: 'merge',
           whenNotMatched: 'discard',
         },
       },
     ];
 
     await this.saleModel.aggregate(pipe);
+  }
+
+  @Cron(CronExpression.EVERY_10_HOURS)
+  async calculateProductByPurchase() {
+    const aMonthAgo = Util.GetMonthAgo();
+    const pipe: PipelineStage[] = [
+      {
+        $match: {
+          inDate: { $gte: aMonthAgo },
+        },
+      },
+      {
+        $group: {
+          _id: '$product',
+          recentHighPurchasePrice: { $max: '$inPrice' },
+          recentLowPurchasePrice: { $min: '$inPrice' },
+          totalInPrice: { $sum: '$inPrice' },
+          count: { $sum: 1 },
+          allInPrices: { $push: '$inPrice' },
+        },
+      },
+      {
+        $addFields: {
+          averagePurchasePrice: {
+            $divide: ['$totalInPrice', '$count'],
+          },
+        },
+      },
+      {
+        $addFields: {
+          belowAveragePurchaseCount: {
+            $size: {
+              $filter: {
+                input: '$allInPrices',
+                as: 'price',
+                cond: { $gte: ['$$price', '$averagePurchasePrice'] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          recentHighPurchasePrice: 1,
+          recentLowPurchasePrice: 1,
+          belowAveragePurchaseCount: 1,
+        },
+      },
+      {
+        $merge: {
+          into: 'products',
+          on: '_id',
+          whenMatched: 'merge',
+          whenNotMatched: 'discard',
+        },
+      },
+    ];
+
+    const r = await this.purchaseModel.aggregate(pipe);
+    console.log(r);
   }
 
   private async unlinkExcelFile(filePath: string) {

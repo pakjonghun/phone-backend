@@ -86,6 +86,11 @@ export class AppController {
     await this.appService.calculateProduct();
   }
 
+  @Get('/purchase/apply')
+  async applyPurchase() {
+    await this.appService.calculateProductByPurchase();
+  }
+
   @Get('/sale/download')
   async downloadSale(@Query() query: DownloadSaleDTO) {
     return this.appService.downloadSale(query.idList);
