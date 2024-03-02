@@ -21,8 +21,8 @@ import {
   EXCEL_FILE_SIZE_LIMIT,
 } from './common/constant';
 import { SaleListDTO } from './dto/sale.list.dto';
-import { ConfirmSaleListDTO } from './dto/confirm.sale.dto';
-import { DownloadSaleDTO } from './dto/download.sale.dto';
+import { CommonMultiUpdateDTO } from './dto/confirm.sale.dto';
+import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
@@ -77,8 +77,13 @@ export class AppController {
   }
 
   @Put('/sale')
-  async saleConfirm(@Body() body: ConfirmSaleListDTO) {
+  async saleConfirm(@Body() body: CommonMultiUpdateDTO) {
     await this.appService.confirmSale(body.idList);
+  }
+
+  @Put('/purchase')
+  async purchaseConfirm(@Body() body: CommonMultiUpdateDTO) {
+    await this.appService.confirmPurchase(body.idList);
   }
 
   @Get('/sale/apply')
@@ -92,7 +97,12 @@ export class AppController {
   }
 
   @Get('/sale/download')
-  async downloadSale(@Query() query: DownloadSaleDTO) {
+  async downloadSale(@Query() query: CommonDownloadDTO) {
     return this.appService.downloadSale(query.idList);
+  }
+
+  @Get('/purchase/download')
+  async downloadPurchase(@Query() query: CommonDownloadDTO) {
+    return this.appService.downloadPurchase(query.idList);
   }
 }

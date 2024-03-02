@@ -518,9 +518,103 @@ export class AppService {
     const buffer = await workbook.xlsx.writeBuffer();
     return buffer;
   }
+  async downloadPurchase(idList: string[]) {
+    type Result = {
+      distanceLog: 1;
+      product: string;
+      rank: number;
+      recentHighPurchasePrice: number;
+      recentLowPurchasePrice: number;
+      belowAveragePurchaseCount: number;
+      isConfirmed: boolean;
+    };
+
+    const objectIds = idList.map((id) => new ObjectId(id));
+    const stream = await this.purchaseModel.aggregate<Result>([
+      {
+        $match: { _id: { $in: objectIds } },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          foreignField: '_id',
+          localField: 'product',
+          as: 'product',
+        },
+      },
+      {
+        $unwind: '$product',
+      },
+      {
+        $addFields: {
+          product: '$product._id',
+          recentHighPurchasePrice: '$product.recentHighPurchasePrice',
+          recentLowPurchasePrice: '$product.recentLowPurchasePrice',
+          belowAveragePurchaseCount: '$product.belowAveragePurchaseCount',
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          distanceLog: 1,
+          product: 1,
+          rank: 1,
+          recentHighPurchasePrice: 1,
+          recentLowPurchasePrice: 1,
+          belowAveragePurchaseCount: 1,
+          isConfirmed: 1,
+        },
+      },
+    ]);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('매입시트');
+
+    worksheet.columns = [
+      { header: '펫네임', key: 'product' },
+      { header: '등급', key: 'rank' },
+      { header: '차감내역', key: 'distanceLog' },
+      { key: 'recentHighPurchasePrice', header: '최근 고가매입가' },
+      { key: 'recentLowPurchasePrice', header: '최근 저가매입가' },
+      { key: 'belowAveragePurchaseCount', header: '최근 평균가 이상 매입수' },
+      { header: '관리자 승인여부', key: 'isConfirmed' },
+    ];
+
+    for await (const doc of stream) {
+      const newDoc = {
+        product: doc.product,
+        rank: this.saleRankReverse[doc.rank] ?? '',
+        distanceLog: doc.distanceLog ?? '',
+        recentHighPurchasePrice: doc.recentHighPurchasePrice,
+        recentLowPurchasePrice: doc.recentLowPurchasePrice,
+        belowAveragePurchaseCount: doc.belowAveragePurchaseCount,
+        isConfirmed: doc.isConfirmed ? '승인대기' : '승인완료',
+      };
+
+      worksheet.addRow(newDoc);
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
+  }
 
   async confirmSale(idList: string[]) {
     const result = await this.saleModel.updateMany(
+      {
+        _id: { $in: idList },
+      },
+      { $set: { isConfirmed: true } },
+    );
+
+    if (result.modifiedCount !== idList.length) {
+      throw new BadRequestException(
+        `${idList.length}개 데이터 중 ${result.modifiedCount}개 데이터만 승인이 완료되었습니다.`,
+      );
+    }
+  }
+
+  async confirmPurchase(idList: string[]) {
+    const result = await this.purchaseModel.updateMany(
       {
         _id: { $in: idList },
       },
@@ -649,8 +743,7 @@ export class AppService {
       },
     ];
 
-    const r = await this.purchaseModel.aggregate(pipe);
-    console.log(r);
+    await this.purchaseModel.aggregate(pipe);
   }
 
   private async unlinkExcelFile(filePath: string) {

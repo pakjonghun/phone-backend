@@ -1,6 +1,6 @@
 import { IsArray, IsString } from 'class-validator';
 
-export class DownloadSaleDTO {
+export class CommonDownloadDTO {
   @IsArray()
   @IsString({ each: true })
   idList: string[];
