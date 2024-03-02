@@ -5,6 +5,8 @@ import {
   registerDecorator,
 } from 'class-validator';
 import { Order } from '../type';
+import { ISale } from 'src/scheme/sale.scheme';
+import { IProduct } from 'src/scheme/product.scheme';
 
 const order: Record<Order, number> = {
   [1]: 1,
@@ -20,9 +22,9 @@ export class IsKeyOfOrder implements ValidatorConstraintInterface {
 
 @ValidatorConstraint({ async: false })
 class IsOrderValidConstraint implements ValidatorConstraintInterface {
-  validate(propertyValue: any[]) {
-    return propertyValue.every((item) => {
-      return item[1] === '1' || item[1] === '-1';
+  validate(propertyValue: [string, string][]) {
+    return propertyValue.every(([, order]) => {
+      return order === '1' || order === '-1';
     });
   }
 
@@ -39,6 +41,47 @@ export function IsOrderValid(validationOptions?: ValidationOptions) {
       options: validationOptions,
       constraints: [],
       validator: IsOrderValidConstraint,
+    });
+  };
+}
+
+type SaleSortKey = Pick<
+  ISale,
+  'product' | 'isConfirmed' | 'rank' | 'distanceLog'
+> &
+  Omit<IProduct, '_id'>;
+
+const saleSortKey: Record<keyof SaleSortKey, number> = {
+  product: 1,
+  belowAverageCount: 1,
+  distanceLog: 1,
+  isConfirmed: 1,
+  rank: 1,
+  recentHighSalePrice: 1,
+  recentLowPrice: 1,
+};
+
+@ValidatorConstraint({ async: false })
+class IsSortKeyValidConstraint implements ValidatorConstraintInterface {
+  validate(propertyValue: [string, string][]) {
+    return propertyValue.every(([key]) => {
+      return !!saleSortKey[key];
+    });
+  }
+
+  defaultMessage() {
+    return '잘못된 정렬 키 입니다.';
+  }
+}
+
+export function IsSortKeyValid(validationOptions?: ValidationOptions) {
+  return function (object: any, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      constraints: [],
+      validator: IsSortKeyValidConstraint,
     });
   };
 }

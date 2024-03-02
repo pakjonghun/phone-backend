@@ -11,7 +11,13 @@ import { Purchase, PurchaseScheme } from 'src/scheme/purchase.scheme';
 import { Sale, SaleScheme } from 'src/scheme/sale.scheme';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './user/user.module';
-import { purchaseExcelMapper, saleExcelMapper, saleRank } from './constant';
+import {
+  purchaseExcelMapper,
+  saleDownloadMapper,
+  saleExcelMapper,
+  saleRank,
+} from './constant';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -38,6 +44,7 @@ import { purchaseExcelMapper, saleExcelMapper, saleRank } from './constant';
       { name: Sale.name, schema: SaleScheme },
     ]),
     UserModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
@@ -53,6 +60,10 @@ import { purchaseExcelMapper, saleExcelMapper, saleRank } from './constant';
     {
       provide: 'saleRank',
       useValue: saleRank,
+    },
+    {
+      provide: 'saleDownloadMapper',
+      useValue: saleDownloadMapper,
     },
   ],
 })

@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Get,
   ParseFilePipe,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseInterceptors,
@@ -18,7 +20,9 @@ import {
   ALLOW_EXCEL_FILE_TYPE_LIST,
   EXCEL_FILE_SIZE_LIMIT,
 } from './common/constant';
-import { SaleListDTO } from './dto/saleList.dto';
+import { SaleListDTO } from './dto/sale.list.dto';
+import { ConfirmSaleListDTO } from './dto/confirm.sale.dto';
+import { DownloadSaleDTO } from './dto/download.sale.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Controller()
@@ -63,5 +67,20 @@ export class AppController {
   async saleList(@Query() query: SaleListDTO) {
     const result = await this.appService.saleList(query);
     return result;
+  }
+
+  @Put('/sale')
+  async saleConfirm(@Body() body: ConfirmSaleListDTO) {
+    await this.appService.confirmSale(body.idList);
+  }
+
+  @Get('/sale/apply')
+  async applySale() {
+    await this.appService.calculateProduct();
+  }
+
+  @Get('/sale/download')
+  async downloadSale(@Query() query: DownloadSaleDTO) {
+    await this.appService.downloadSale(query.idList);
   }
 }

@@ -2,6 +2,9 @@ import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { FallbackFilter } from './common/exception/filter/fallback.filter';
+import { HttpFilter } from './common/exception/filter/http.filter';
+import { ValidateFilter } from './common/exception/filter/validation.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,7 +14,11 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-
+  app.useGlobalFilters(
+    new FallbackFilter(),
+    new HttpFilter(),
+    new ValidateFilter(),
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

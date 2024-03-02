@@ -1,5 +1,7 @@
+import { Column } from './common/type';
+import { Product } from './scheme/product.scheme';
 import { IPurchase } from './scheme/purchase.scheme';
-import { ISale } from './scheme/sale.scheme';
+import { ISale, Sale } from './scheme/sale.scheme';
 
 export type PurchaseExcelMapper = Record<number, keyof IPurchase>;
 export const purchaseExcelMapper: PurchaseExcelMapper = {
@@ -37,15 +39,30 @@ export type SaleRank =
   | 'D-';
 export const saleRank: SaleRank[] = [
   'A+',
-  'A-',
   'A',
+  'A-',
   'B+',
-  'B-',
   'B',
+  'B-',
   'C+',
-  'C-',
   'C',
-  'D',
+  'C-',
   'D+',
+  'D',
   'D-',
+];
+
+export type SaleDownloadMapper = Column<
+  keyof (Product &
+    Pick<Sale, 'product' | 'distanceLog' | 'isConfirmed' | 'rank' | 'outPrice'>)
+>[];
+
+export const saleDownloadMapper: SaleDownloadMapper = [
+  { key: 'product', header: '펫네임' },
+  { key: 'rank', header: '등급' },
+  { key: 'distanceLog', header: '차감내역' },
+  { key: 'recentHighSalePrice', header: '최근 고가 판매가' },
+  { key: 'recentLowPrice', header: '최근 저가 판매가' },
+  { key: 'belowAverageCount', header: '평균 이하 판매수' },
+  { key: 'isConfirmed', header: '등급' },
 ];

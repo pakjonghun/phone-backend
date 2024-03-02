@@ -1,13 +1,17 @@
 import { Transform } from 'class-transformer';
 import { IsArray, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Order } from 'src/common/type';
-import { IsOrderValid } from 'src/common/validation/order.validation';
+import {
+  IsOrderValid,
+  IsSortKeyValid,
+} from 'src/common/validation/order.validation';
 
 export class SaleListDTO {
   @IsOptional()
   @IsArray()
   @IsArray({ each: true })
   @IsOrderValid()
+  @IsSortKeyValid()
   sort: [string, Order][];
 
   @IsOptional()

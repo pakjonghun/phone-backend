@@ -7,7 +7,7 @@ export interface ISale {
   outDate: string;
   inDate: string;
   isConfirmed: boolean;
-  rank: string;
+  rank: number;
   distanceLog: string | null;
   inClient: Client;
   outClient: Client;
@@ -18,7 +18,7 @@ export interface ISale {
 
 export type SaleDocument = HydratedDocument<Sale>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Sale implements ISale {
   @Prop({ type: String, isRequired: true })
   outDate: string;
@@ -29,8 +29,8 @@ export class Sale implements ISale {
   @Prop({ type: Boolean, isRequired: true })
   isConfirmed: boolean;
 
-  @Prop({ type: String, isRequired: true })
-  rank: string;
+  @Prop({ type: Number, isRequired: true })
+  rank: number;
 
   @Prop({ type: String, isRequired: false, default: null })
   distanceLog: string | null;

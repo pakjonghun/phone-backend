@@ -1,14 +1,23 @@
+import { ObjectId } from 'mongodb';
+import * as fs from 'fs';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sale } from './scheme/sale.scheme';
 import { Model, PipelineStage, SortOrder } from 'mongoose';
 import { Product } from './scheme/product.scheme';
 import { Client } from './scheme/client.scheme';
-import { PurchaseExcelMapper, SaleExcelMapper, SaleRank } from './constant';
+import {
+  PurchaseExcelMapper,
+  SaleDownloadMapper,
+  SaleExcelMapper,
+  SaleRank,
+} from './constant';
 import { Util } from './common/helper/service.helper';
 import * as ExcelJS from 'exceljs';
 import { Purchase } from './scheme/purchase.scheme';
-import { SaleListDTO } from './dto/saleList.dto';
+import { SaleListDTO } from './dto/sale.list.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { promisify } from 'util';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Injectable()
@@ -20,6 +29,8 @@ export class AppService {
     @InjectModel(Purchase.name) private purchaseModel: Model<Purchase>,
     @Inject('saleExcelMapper') private saleExcelMapper: SaleExcelMapper,
     @Inject('saleRank') private saleRank: SaleRank[],
+    @Inject('saleDownloadMapper')
+    private saleDownloadMapper: SaleDownloadMapper,
     @Inject('purchaseExcelMapper')
     private purchaseExcelMapper: PurchaseExcelMapper,
   ) {}
@@ -143,10 +154,21 @@ export class AppService {
           let value =
             typeof cell.value == 'string' ? cell.value.trim() : cell.value;
           if (fieldName.toLowerCase().includes('date')) {
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다.`,
+              );
+            }
+
             value = Util.GetDateString(value.toString());
           }
 
           if (fieldName === 'product') {
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다.`,
+              );
+            }
             const modelNumber = value as string;
             productSet.add(modelNumber);
           }
@@ -156,20 +178,23 @@ export class AppService {
           }
 
           if (fieldName === 'rank') {
-            const rank = this.saleRank.find((item) =>
-              value.toString().toUpperCase().includes(item),
-            );
-            if (rank) {
-              value = rank;
+            if (!value) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
+              );
             }
 
-            if (!rank) {
+            const rank = this.saleRank.findIndex((item) =>
+              value.toString().toUpperCase().includes(item),
+            );
+            if (rank !== -1) {
+              value = rank;
+            } else {
               throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A~D까지 등급이 포함된 특이사항으로 적어주세요)`,
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
               );
             }
           }
-
           newSale[fieldName as string] = value;
           const isValid = newSale.$isValid(fieldName);
 
@@ -217,9 +242,16 @@ export class AppService {
 
       break;
     }
+
+    await this.unlinkExcelFile(uploadFile.path);
   }
 
-  async saleList({ keyword, length, page, sort = [] }: SaleListDTO) {
+  async saleList({
+    keyword,
+    length,
+    page,
+    sort = [['updatedAt', -1]],
+  }: SaleListDTO) {
     const filter = {
       product: { $regex: keyword, $options: 'i' },
     };
@@ -253,11 +285,19 @@ export class AppService {
       {
         $limit: length,
       },
+      {
+        $project: {
+          distanceLog: 1,
+          isConfirmed: 1,
+          product: 1,
+          rank: 1,
+          _id: 1,
+        },
+      },
     ];
 
     if (sortList.length) {
       const parseSortList = sortList.map(([sortKey, order]) => {
-        ['belowAverageCount', 'recentHighSalePrice', 'recentLowPrice'];
         switch (sortKey) {
           case 'belowAverageCount':
           case 'recentHighSalePrice':
@@ -270,9 +310,8 @@ export class AppService {
       });
 
       const objectSortList = Object.fromEntries(parseSortList);
-      pipe.push({
-        $sort: objectSortList,
-      });
+      const skipIndex = Object.keys(pipe).findIndex((item) => item === '$skip');
+      pipe.splice(skipIndex, 0, { $sort: objectSortList });
     }
 
     const data = await this.saleModel.aggregate(pipe);
@@ -282,5 +321,139 @@ export class AppService {
       hasNext,
       data,
     };
+  }
+
+  async downloadSale(idList: string[]) {
+    const objectIds = idList.map((id) => new ObjectId(id));
+    const stream = this.saleModel
+      .aggregate([
+        {
+          $match: { _id: { $in: objectIds } },
+        },
+        {
+          $lookup: {
+            from: 'products',
+            foreignField: '_id',
+            localField: 'product',
+            as: 'product',
+          },
+        },
+        {
+          $unwind: '$product',
+        },
+        {
+          $addFields: {
+            product: '$product._id',
+            recentHighSalePrice: '$product.recentHighSalePrice',
+            recentLowPrice: '$product.recentLowPrice',
+            belowAverageCount: '$product.belowAverageCount',
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            distanceLog: 1,
+            product: 1,
+            rank: 1,
+            recentHighSalePrice: 1,
+            recentLowPrice: 1,
+            belowAverageCount: 1,
+            isConfirmed: 1,
+          },
+        },
+      ])
+      .cursor();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('판매시트');
+    worksheet.columns = this.saleDownloadMapper;
+
+    for await (const doc of stream) {
+      worksheet.addRow(doc);
+    }
+
+    await stream.close();
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
+  }
+
+  async confirmSale(idList: string[]) {
+    const result = await this.saleModel.updateMany(
+      {
+        _id: { $in: idList },
+      },
+      { $set: { isConfirmed: true } },
+    );
+
+    if (result.modifiedCount !== idList.length) {
+      throw new BadRequestException(
+        `${idList.length}개 데이터 중 ${result.modifiedCount}개 데이터만 승인이 완료되었습니다.`,
+      );
+    }
+  }
+
+  @Cron(CronExpression.EVERY_10_HOURS)
+  async calculateProduct() {
+    const aMonthAgo = Util.GetMonthAgo();
+    const pipe: PipelineStage[] = [
+      {
+        $match: {
+          outDate: { $gte: aMonthAgo },
+        },
+      },
+      {
+        $group: {
+          _id: '$product',
+          recentHighSalePrice: { $max: '$outPrice' },
+          recentLowPrice: { $min: '$outPrice' },
+          totalOutPrice: { $sum: '$outPrice' },
+          count: { $sum: 1 },
+          allOutPrices: { $push: '$outPrice' },
+        },
+      },
+      {
+        $addFields: {
+          averageSalePrice: {
+            $divide: ['$totalOutPrice', '$count'],
+          },
+        },
+      },
+      {
+        $addFields: {
+          belowAverageCount: {
+            $size: {
+              $filter: {
+                input: '$allOutPrices',
+                as: 'price',
+                cond: { $lte: ['$$price', '$averageSalePrice'] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          recentHighSalePrice: 1,
+          recentLowPrice: 1,
+          belowAverageCount: 1,
+        },
+      },
+      {
+        $merge: {
+          into: 'products',
+          on: '_id',
+          whenMatched: 'replace',
+          whenNotMatched: 'discard',
+        },
+      },
+    ];
+
+    await this.saleModel.aggregate(pipe);
+  }
+
+  private async unlinkExcelFile(filePath: string) {
+    const unlinkAsync = promisify(fs.unlink);
+    await unlinkAsync(filePath);
   }
 }
