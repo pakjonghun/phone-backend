@@ -27,8 +27,6 @@ async function bootstrap() {
       transform: true,
       exceptionFactory(errors) {
         const messages = errors.map((error) => {
-          const constraints = error.constraints;
-          console.log(constraints);
           const property = error.property;
           const value = error.value;
 
