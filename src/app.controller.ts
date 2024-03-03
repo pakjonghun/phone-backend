@@ -109,7 +109,7 @@ export class AppController {
 
   @Get('/dashboard')
   async dashboard() {
-    return this.appService.topTwoSaleCountProduct();
+    return this.appService.dashboardData();
   }
 
   @Delete('reset')

@@ -758,8 +758,8 @@ export class AppService {
     await this.purchaseModel.aggregate(pipe);
   }
 
-  async topTwoSaleCountProduct() {
-    const topSaleByCount = await this.saleModel.aggregate([
+  async dashboardData() {
+    const topThreeProduct = await this.saleModel.aggregate([
       {
         $group: {
           _id: '$product',
@@ -773,47 +773,11 @@ export class AppService {
         },
       },
       {
-        $limit: 10,
+        $limit: 3,
       },
     ]);
 
-    const topPurchaseByCount = await this.purchaseModel.aggregate([
-      {
-        $group: {
-          _id: '$product',
-          count: { $sum: 1 },
-          accPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $sort: {
-          count: -1,
-        },
-      },
-      {
-        $limit: 10,
-      },
-    ]);
-
-    const topPurchaseClientByCount = await this.purchaseModel.aggregate([
-      {
-        $group: {
-          _id: '$inClient',
-          count: { $sum: 1 },
-          accPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $sort: {
-          count: -1,
-        },
-      },
-      {
-        $limit: 10,
-      },
-    ]);
-
-    const topSaleClientByCount = await this.saleModel.aggregate([
+    const topThreeClient = await this.saleModel.aggregate([
       {
         $group: {
           _id: '$outClient',
@@ -824,10 +788,11 @@ export class AppService {
       {
         $sort: {
           count: -1,
+          accPrice: -1,
         },
       },
       {
-        $limit: 10,
+        $limit: 3,
       },
     ]);
 
@@ -843,12 +808,13 @@ export class AppService {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          totalSale: { $sum: '$inPrice' },
+          accPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
           count: -1,
+          accPrice: -1,
         },
       },
       {
@@ -856,8 +822,61 @@ export class AppService {
       },
     ]);
 
-    // console.log(topSaleByCount, topPurchaseByCount, topPurchaseClientByCount);
-    console.log(topSaleClientByCount);
+    const recentTenSale = await this.saleModel
+      .find({})
+      .sort({ outDate: -1 })
+      .limit(10);
+
+    const recentTenPurchase = await this.purchaseModel
+      .find({})
+      .sort({ inDate: -1 })
+      .limit(10);
+
+    const topTenClientSale = await this.saleModel.aggregate([
+      {
+        $group: {
+          _id: '$outClient',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$outPrice' },
+        },
+      },
+      {
+        $sort: {
+          accPrice: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    const topTenClientPurchase = await this.purchaseModel.aggregate([
+      {
+        $group: {
+          _id: '$inClient',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $sort: {
+          accPrice: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    return {
+      topThreeProduct,
+      topThreeClient,
+      totalSale: totalSale[0],
+      recentTenSale,
+      recentTenPurchase,
+      topTenClientSale,
+      topTenClientPurchase,
+    };
   }
 
   async reset() {
