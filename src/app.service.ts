@@ -758,6 +758,115 @@ export class AppService {
     await this.purchaseModel.aggregate(pipe);
   }
 
+  async topTwoSaleCountProduct() {
+    const topSaleByCount = await this.saleModel.aggregate([
+      {
+        $group: {
+          _id: '$product',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$outPrice' },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    const topPurchaseByCount = await this.purchaseModel.aggregate([
+      {
+        $group: {
+          _id: '$product',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    const topPurchaseClientByCount = await this.purchaseModel.aggregate([
+      {
+        $group: {
+          _id: '$inClient',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    const topSaleClientByCount = await this.saleModel.aggregate([
+      {
+        $group: {
+          _id: '$outClient',
+          count: { $sum: 1 },
+          accPrice: { $sum: '$outPrice' },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    const totalSale = await this.saleModel.aggregate([
+      {
+        $match: {
+          $expr: {
+            $gt: ['$outPrice', 0],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          totalSale: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+    ]);
+
+    // console.log(topSaleByCount, topPurchaseByCount, topPurchaseClientByCount);
+    console.log(topSaleClientByCount);
+  }
+
+  async reset() {
+    await this.productModel.deleteMany();
+    await this.purchaseModel.deleteMany();
+    await this.saleModel.deleteMany();
+    await this.clientModel.deleteMany();
+  }
+
   private async unlinkExcelFile(filePath: string) {
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(filePath);

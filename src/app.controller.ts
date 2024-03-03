@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   ParseFilePipe,
   Post,
@@ -104,5 +105,15 @@ export class AppController {
   @Get('/purchase/download')
   async downloadPurchase(@Query() query: CommonDownloadDTO) {
     return this.appService.downloadPurchase(query.idList);
+  }
+
+  @Get('/dashboard')
+  async dashboard() {
+    return this.appService.topTwoSaleCountProduct();
+  }
+
+  @Delete('reset')
+  async reset() {
+    await this.appService.reset();
   }
 }
