@@ -90,7 +90,7 @@ export class UserController {
   @SetLog('로그아웃')
   @AuthType(AUTH_TYPE.ANY)
   @UseInterceptors(LogoutInterceptor)
-  @Post('logout')
+  @Get('logout')
   async logout() {
     // res.cookie('userInfo', '', { maxAge: 0 });
   }
