@@ -18,7 +18,7 @@ export class SaveCookieInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((userInfo) => {
         response.cookie('userInfo', userInfo.token, {
-          // domain: this.config.get('COOKIE_DOMAIN'),
+          domain: this.config.get('COOKIE_DOMAIN'),
           maxAge: oneWeek,
           httpOnly: true,
           secure: true,
