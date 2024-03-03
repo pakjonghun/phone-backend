@@ -142,6 +142,7 @@ export class AppService {
         );
 
         newPurchase.isConfirmed = false;
+        await newPurchase.validate();
         const obj = newPurchase.toObject();
         delete obj._id;
         newDocument.push(obj);
@@ -272,7 +273,8 @@ export class AppService {
         //     '유효하지 않은 값이 입력된 문서가 있습니다. ',
         //   );
         // }
-
+        newSale.isConfirmed = false;
+        await newSale.validate();
         const obj = newSale.toObject();
         delete obj._id;
         newDocument.push(obj);
