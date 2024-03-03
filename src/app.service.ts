@@ -19,6 +19,7 @@ import { SaleListDTO } from './dto/sale.list.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
+import { MarginListDTO } from './dto/margin.list.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Injectable()
@@ -886,30 +887,18 @@ export class AppService {
     await this.clientModel.deleteMany();
   }
 
-  async minusMargin(
-    args = {
-      page: 1,
-      length: 1000,
-      startDate: '20240101000000',
-      endDate: '20250101000000',
-      keyword: '',
-    },
-  ) {
-    type MinusMarginDTO = {
-      page: number;
-      length: number;
-      startDate: string;
-      endDate: string;
-      keyword: string;
-    };
-
-    const { page, length, startDate, endDate, keyword } =
-      args as MinusMarginDTO;
-
-    const result = await this.saleModel.aggregate([
+  async minusMargin({
+    page,
+    length,
+    keyword,
+    sort,
+    endDate,
+    startDate,
+  }: MarginListDTO) {
+    const pipe: PipelineStage[] = [
       {
         $match: {
-          product: { $regex: '1', $options: 'i' },
+          product: { $regex: keyword, $options: 'i' },
           $expr: {
             $and: [
               { $gte: ['$inDate', startDate] },
@@ -943,7 +932,7 @@ export class AppService {
           inPrice: 1,
           outPrice: 1,
           margin: 1,
-          marginRage: 1,
+          marginRate: 1,
         },
       },
       {
@@ -957,8 +946,19 @@ export class AppService {
       {
         $limit: length,
       },
-    ]);
+    ];
 
+    const sortList = sort.map((item) => {
+      return [item[0], Number(item[1])];
+    }) as [string, 1 | -1][];
+    const objectSortList = Object.fromEntries(sortList);
+    const skipIndex = pipe.findIndex((item) => {
+      const stageKey = Object.keys(item)[0];
+      return stageKey === '$skip';
+    });
+    pipe.splice(skipIndex, 0, { $sort: objectSortList });
+
+    const result = await this.saleModel.aggregate(pipe);
     return result;
   }
 

@@ -135,3 +135,37 @@ export function IsPurchaseKeyValid(validationOptions?: ValidationOptions) {
     });
   };
 }
+
+const marginSortKey: Record<string, number> = {
+  product: 1,
+  inPrice: 1,
+  outPrice: 1,
+  margin: 1,
+  marginRate: 1,
+  isConfirmed: 1,
+};
+
+@ValidatorConstraint({ async: false })
+class IsMarginKeyValidConstraint implements ValidatorConstraintInterface {
+  validate(propertyValue: [string, string][]) {
+    return propertyValue.every(([key]) => {
+      return !!marginSortKey[key];
+    });
+  }
+
+  defaultMessage() {
+    return '잘못된 정렬 키 입니다.';
+  }
+}
+
+export function IsMarginSortKeyValid(validationOptions?: ValidationOptions) {
+  return function (object: any, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      constraints: [],
+      validator: IsMarginKeyValidConstraint,
+    });
+  };
+}

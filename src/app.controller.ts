@@ -25,6 +25,7 @@ import { SaleListDTO } from './dto/sale.list.dto';
 import { CommonMultiUpdateDTO } from './dto/confirm.sale.dto';
 import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
+import { MarginListDTO } from './dto/margin.list.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Controller()
@@ -118,8 +119,8 @@ export class AppController {
   }
 
   @Get('margin')
-  async margin() {
-    const result = await this.appService.minusMargin();
+  async margin(@Query() query: MarginListDTO) {
+    const result = await this.appService.minusMargin(query);
     return result;
   }
 }
