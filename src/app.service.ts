@@ -268,11 +268,6 @@ export class AppService {
 
         newSale.isConfirmed = false;
         await newSale.validate();
-        // if (!isValid) {
-        //   throw new BadRequestException(
-        //     '유효하지 않은 값이 입력된 문서가 있습니다. ',
-        //   );
-        // }
         newSale.isConfirmed = false;
         await newSale.validate();
         const obj = newSale.toObject();
