@@ -141,6 +141,7 @@ export class AppService {
           })),
         );
 
+        newPurchase.isConfirmed = false;
         const obj = newPurchase.toObject();
         delete obj._id;
         newDocument.push(obj);
@@ -264,6 +265,14 @@ export class AppService {
           })),
         );
 
+        newSale.isConfirmed = false;
+        await newSale.validate();
+        // if (!isValid) {
+        //   throw new BadRequestException(
+        //     '유효하지 않은 값이 입력된 문서가 있습니다. ',
+        //   );
+        // }
+
         const obj = newSale.toObject();
         delete obj._id;
         newDocument.push(obj);
@@ -349,7 +358,10 @@ export class AppService {
       });
 
       const objectSortList = Object.fromEntries(parseSortList);
-      const skipIndex = Object.keys(pipe).findIndex((item) => item === '$skip');
+      const skipIndex = pipe.findIndex((item) => {
+        const stageKey = Object.keys(item)[0];
+        return stageKey === '$skip';
+      });
       pipe.splice(skipIndex, 0, { $sort: objectSortList });
     }
 
@@ -418,15 +430,18 @@ export class AppService {
           case 'recentHighPurchasePrice':
           case 'recentLowPurchasePrice':
           case 'belowAveragePurchaseCount':
-            return [`product.${sortKey}`, order];
+            return [`product.${sortKey}`, Number(order)];
 
           default:
-            return [sortKey, order];
+            return [sortKey, Number(order)];
         }
       });
 
       const objectSortList = Object.fromEntries(parseSortList);
-      const skipIndex = Object.keys(pipe).findIndex((item) => item === '$skip');
+      const skipIndex = pipe.findIndex((item) => {
+        const stageKey = Object.keys(item)[0];
+        return stageKey === '$skip';
+      });
       pipe.splice(skipIndex, 0, { $sort: objectSortList });
     }
 

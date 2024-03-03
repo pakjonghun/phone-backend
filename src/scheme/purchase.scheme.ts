@@ -17,29 +17,29 @@ export type SaleDocument = HydratedDocument<IPurchase>;
 
 @Schema({ timestamps: true })
 export class Purchase implements IPurchase {
-  @Prop({ type: String, isRequired: true })
+  @Prop({ type: String, required: true })
   inDate: string;
 
-  @Prop({ type: Boolean, isRequired: true })
+  @Prop({ type: Boolean, required: true })
   isConfirmed: boolean;
 
-  @Prop({ type: Number, isRequired: true })
+  @Prop({ type: Number, required: true })
   rank: number;
 
-  @Prop({ type: String, isRequired: false, default: null })
+  @Prop({ type: String, required: false, default: null })
   distanceLog: string | null;
 
   @Prop({
     type: String,
     ref: Client.name,
-    isRequired: true,
+    required: true,
   })
   inClient: Client;
 
   @Prop({
     type: String,
     ref: Product.name,
-    isRequired: true,
+    required: true,
   })
   product: Product;
 
