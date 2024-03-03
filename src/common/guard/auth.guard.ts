@@ -36,7 +36,6 @@ export class AuthGuard implements CanActivate {
     if (authType == null) return true;
 
     if (AUTH_TYPE.ANY === authType) {
-      console.log('any userInfo', userInfo);
       return Boolean(userInfo);
     }
 
