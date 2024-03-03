@@ -116,4 +116,10 @@ export class AppController {
   async reset() {
     await this.appService.reset();
   }
+
+  @Get('margin')
+  async margin() {
+    const result = await this.appService.minusMargin();
+    return result;
+  }
 }

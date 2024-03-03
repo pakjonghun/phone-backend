@@ -886,6 +886,82 @@ export class AppService {
     await this.clientModel.deleteMany();
   }
 
+  async minusMargin(
+    args = {
+      page: 1,
+      length: 1000,
+      startDate: '20240101000000',
+      endDate: '20250101000000',
+      keyword: '',
+    },
+  ) {
+    type MinusMarginDTO = {
+      page: number;
+      length: number;
+      startDate: string;
+      endDate: string;
+      keyword: string;
+    };
+
+    const { page, length, startDate, endDate, keyword } =
+      args as MinusMarginDTO;
+
+    const result = await this.saleModel.aggregate([
+      {
+        $match: {
+          product: { $regex: '1', $options: 'i' },
+          $expr: {
+            $and: [
+              { $gte: ['$inDate', startDate] },
+              { $lte: ['$inDate', endDate] },
+              { $lt: [{ $subtract: ['$inPrice', '$outPrice'] }, 0] },
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          margin: { $subtract: ['$inPrice', '$outPrice'] },
+          marginRage: {
+            $multiply: [
+              {
+                $divide: [
+                  { $subtract: ['$inPrice', '$outPrice'] },
+                  '$outPrice',
+                ],
+              },
+              100,
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          product: 1,
+          isConfirmed: 1,
+          inPrice: 1,
+          outPrice: 1,
+          margin: 1,
+          marginRage: 1,
+        },
+      },
+      {
+        $sort: {
+          inDate: -1,
+        },
+      },
+      {
+        $skip: (page - 1) * length,
+      },
+      {
+        $limit: length,
+      },
+    ]);
+
+    return result;
+  }
+
   private async unlinkExcelFile(filePath: string) {
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(filePath);
