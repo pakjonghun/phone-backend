@@ -934,11 +934,6 @@ export class AppService {
               },
             },
             {
-              $sort: {
-                inDate: -1,
-              },
-            },
-            {
               $skip: (page - 1) * length,
             },
             {
@@ -950,6 +945,14 @@ export class AppService {
       },
     ];
 
+    const sortList = sort.map((item) => {
+      return [item[0], Number(item[1])];
+    }) as [string, 1 | -1][];
+    const objectSortList = Object.fromEntries(sortList);
+    //@ts-ignore
+    pipe[0].$facet.data.splice(1, 0, { $sort: objectSortList });
+    // pipe.splice(1, 0, { $sort: objectSortList });
+
     if (startDate) {
       match.$match.$expr.$and.push({ $gte: ['$inDate', startDate] });
     }
@@ -960,18 +963,10 @@ export class AppService {
 
     pipe.splice(0, 0, match);
 
-    const sortList = sort.map((item) => {
-      return [item[0], Number(item[1])];
-    }) as [string, 1 | -1][];
-    const objectSortList = Object.fromEntries(sortList);
-    const skipIndex = pipe.findIndex((item) => {
-      const stageKey = Object.keys(item)[0];
-      return stageKey === '$skip';
-    });
-    pipe.splice(skipIndex, 0, { $sort: objectSortList });
-
     const result = await this.saleModel.aggregate(pipe);
-
+    console.log(sort);
+    console.log(pipe);
+    console.log(result[0].data);
     //@ts-ignore
     const data = result[0].data;
 
