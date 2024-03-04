@@ -20,7 +20,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { MarginListDTO } from './dto/margin.list.dto';
-// import { SaleListDTO } from './dto/saleList.dto';
 
 @Injectable()
 export class AppService {
@@ -891,62 +890,75 @@ export class AppService {
     page,
     length,
     keyword,
-    sort,
+    sort = [['updatedAt', -1]],
     endDate,
     startDate,
   }: MarginListDTO) {
+    const match: PipelineStage = {
+      $match: {
+        product: { $regex: keyword, $options: 'i' },
+        $expr: {
+          $and: [{ $lt: [{ $subtract: ['$inPrice', '$outPrice'] }, 0] }],
+        },
+      },
+    };
     const pipe: PipelineStage[] = [
       {
-        $match: {
-          product: { $regex: keyword, $options: 'i' },
-          $expr: {
-            $and: [
-              { $gte: ['$inDate', startDate] },
-              { $lte: ['$inDate', endDate] },
-              { $lt: [{ $subtract: ['$inPrice', '$outPrice'] }, 0] },
-            ],
-          },
-        },
-      },
-      {
-        $addFields: {
-          margin: { $subtract: ['$inPrice', '$outPrice'] },
-          marginRage: {
-            $multiply: [
-              {
-                $divide: [
-                  { $subtract: ['$inPrice', '$outPrice'] },
-                  '$outPrice',
-                ],
+        $facet: {
+          data: [
+            {
+              $addFields: {
+                margin: { $subtract: ['$inPrice', '$outPrice'] },
+                marginRate: {
+                  $multiply: [
+                    {
+                      $divide: [
+                        { $subtract: ['$inPrice', '$outPrice'] },
+                        '$outPrice',
+                      ],
+                    },
+                    100,
+                  ],
+                },
               },
-              100,
-            ],
-          },
+            },
+            {
+              $project: {
+                _id: 1,
+                product: 1,
+                isConfirmed: 1,
+                inPrice: 1,
+                outPrice: 1,
+                margin: 1,
+                marginRate: 1,
+              },
+            },
+            {
+              $sort: {
+                inDate: -1,
+              },
+            },
+            {
+              $skip: (page - 1) * length,
+            },
+            {
+              $limit: length,
+            },
+          ],
+          totalCount: [{ $count: 'count' }],
         },
-      },
-      {
-        $project: {
-          _id: 1,
-          product: 1,
-          isConfirmed: 1,
-          inPrice: 1,
-          outPrice: 1,
-          margin: 1,
-          marginRate: 1,
-        },
-      },
-      {
-        $sort: {
-          inDate: -1,
-        },
-      },
-      {
-        $skip: (page - 1) * length,
-      },
-      {
-        $limit: length,
       },
     ];
+
+    if (startDate) {
+      match.$match.$expr.$and.push({ $gte: ['$inDate', startDate] });
+    }
+
+    if (endDate) {
+      match.$match.$expr.$and.push({ $lte: ['$inDate', endDate] });
+    }
+
+    pipe.splice(0, 0, match);
 
     const sortList = sort.map((item) => {
       return [item[0], Number(item[1])];
@@ -959,6 +971,22 @@ export class AppService {
     pipe.splice(skipIndex, 0, { $sort: objectSortList });
 
     const result = await this.saleModel.aggregate(pipe);
+
+    //@ts-ignore
+    const data = result[0].data;
+
+    //@ts-ignore
+    const totalCount = data.length ? result[0].totalCount[0].count : 0;
+
+    const hasNext = page * length < totalCount;
+
+    return {
+      //@ts-ignore
+      data: result[0].data,
+      totalCount,
+      hasNext,
+    };
+
     return result;
   }
 
