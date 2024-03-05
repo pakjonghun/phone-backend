@@ -909,12 +909,12 @@ export class AppService {
             {
               $addFields: {
                 outClient: '$outClient',
-                margin: { $subtract: ['$inPrice', '$outPrice'] },
+                margin: { $subtract: ['$outPrice', '$inPrice'] },
                 marginRate: {
                   $multiply: [
                     {
                       $divide: [
-                        { $subtract: ['$inPrice', '$outPrice'] },
+                        { $subtract: ['$outPrice', '$inPrice'] },
                         '$outPrice',
                       ],
                     },
@@ -935,6 +935,11 @@ export class AppService {
                 outClient: 1,
               },
             },
+            // {
+            //   $match: {
+            //     margin: { $lte: 0 },
+            //   },
+            // },
             {
               $skip: (page - 1) * length,
             },
