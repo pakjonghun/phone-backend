@@ -98,11 +98,6 @@ export class AppController {
     await this.appService.calculateProductByPurchase();
   }
 
-  @Get('/sale/download')
-  async downloadSale(@Query() query: CommonDownloadDTO) {
-    return this.appService.downloadSale(query.idList);
-  }
-
   @Get('/purchase/download')
   async downloadPurchase(@Query() query: CommonDownloadDTO) {
     return this.appService.downloadPurchase(query.idList);
@@ -122,5 +117,10 @@ export class AppController {
   async margin(@Query() query: MarginListDTO) {
     const result = await this.appService.minusMargin(query);
     return result;
+  }
+
+  @Get('/sale/download')
+  async downloadSale(@Query() query: CommonDownloadDTO) {
+    return this.appService.downloadSale(query.idList);
   }
 }

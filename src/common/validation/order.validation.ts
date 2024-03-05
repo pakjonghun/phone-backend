@@ -143,6 +143,7 @@ const marginSortKey: Record<string, number> = {
   margin: 1,
   marginRate: 1,
   isConfirmed: 1,
+  outClient: 1,
 };
 
 @ValidatorConstraint({ async: false })

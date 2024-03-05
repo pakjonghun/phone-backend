@@ -908,6 +908,7 @@ export class AppService {
           data: [
             {
               $addFields: {
+                outClient: '$outClient',
                 margin: { $subtract: ['$inPrice', '$outPrice'] },
                 marginRate: {
                   $multiply: [
@@ -931,6 +932,7 @@ export class AppService {
                 outPrice: 1,
                 margin: 1,
                 marginRate: 1,
+                outClient: 1,
               },
             },
             {
@@ -949,8 +951,9 @@ export class AppService {
       return [item[0], Number(item[1])];
     }) as [string, 1 | -1][];
     const objectSortList = Object.fromEntries(sortList);
+    console.log(objectSortList);
     //@ts-ignore
-    pipe[0].$facet.data.splice(1, 0, { $sort: objectSortList });
+    pipe[0].$facet.data.splice(2, 0, { $sort: objectSortList });
     // pipe.splice(1, 0, { $sort: objectSortList });
 
     if (startDate) {
@@ -962,11 +965,9 @@ export class AppService {
     }
 
     pipe.splice(0, 0, match);
+    console.dir(pipe, { depth: 100 });
 
     const result = await this.saleModel.aggregate(pipe);
-    console.log(sort);
-    console.log(pipe);
-    console.log(result[0].data);
     //@ts-ignore
     const data = result[0].data;
 
@@ -981,8 +982,6 @@ export class AppService {
       totalCount,
       hasNext,
     };
-
-    return result;
   }
 
   private async unlinkExcelFile(filePath: string) {
