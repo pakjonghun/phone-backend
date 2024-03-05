@@ -7,6 +7,7 @@ import { Model, PipelineStage, SortOrder } from 'mongoose';
 import { Product } from './scheme/product.scheme';
 import { Client } from './scheme/client.scheme';
 import {
+  MarginDownloadMapper,
   PurchaseExcelMapper,
   SaleDownloadMapper,
   SaleExcelMapper,
@@ -37,6 +38,8 @@ export class AppService {
     private saleDownloadMapper: SaleDownloadMapper,
     @Inject('purchaseExcelMapper')
     private purchaseExcelMapper: PurchaseExcelMapper,
+    @Inject('marginDownloadMapper')
+    private marginDownloadMapper: MarginDownloadMapper,
   ) {}
 
   async uploadPurchase(uploadFile: Express.Multer.File) {
@@ -956,7 +959,6 @@ export class AppService {
       return [item[0], Number(item[1])];
     }) as [string, 1 | -1][];
     const objectSortList = Object.fromEntries(sortList);
-    console.log(objectSortList);
     //@ts-ignore
     pipe[0].$facet.data.splice(2, 0, { $sort: objectSortList });
     // pipe.splice(1, 0, { $sort: objectSortList });
@@ -970,7 +972,6 @@ export class AppService {
     }
 
     pipe.splice(0, 0, match);
-    console.dir(pipe, { depth: 100 });
 
     const result = await this.saleModel.aggregate(pipe);
     //@ts-ignore
@@ -989,6 +990,75 @@ export class AppService {
     };
   }
 
+  async downloadMargin(idList: string[]) {
+    type Result = {
+      product: string;
+      isConfirmed: boolean;
+      inPrice: number;
+      outPrice: number;
+      margin: number;
+      marginRate: number;
+      outClient: string;
+    };
+
+    const objectIds = idList.map((id) => new ObjectId(id));
+    const stream = await this.saleModel.aggregate<Result>([
+      {
+        $match: { _id: { $in: objectIds } },
+      },
+      {
+        $addFields: {
+          outClient: '$outClient',
+          margin: { $subtract: ['$outPrice', '$inPrice'] },
+          marginRate: {
+            $multiply: [
+              {
+                $divide: [
+                  { $subtract: ['$outPrice', '$inPrice'] },
+                  '$outPrice',
+                ],
+              },
+              100,
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          product: 1,
+          isConfirmed: 1,
+          inPrice: 1,
+          outPrice: 1,
+          margin: 1,
+          marginRate: 1,
+          outClient: 1,
+        },
+      },
+    ]);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('판매시트');
+
+    worksheet.columns = this.marginDownloadMapper;
+
+    for await (const doc of stream) {
+      const newDoc = {
+        product: doc.product,
+        isConfirmed: doc.isConfirmed,
+        inPrice: doc.inPrice,
+        outPrice: doc.outPrice,
+        margin: doc.margin,
+        marginRate: doc.marginRate,
+        outClient: doc.outClient,
+      };
+
+      worksheet.addRow(newDoc);
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
+  }
   private async unlinkExcelFile(filePath: string) {
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(filePath);

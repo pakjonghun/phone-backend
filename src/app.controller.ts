@@ -123,4 +123,10 @@ export class AppController {
   async downloadSale(@Query() query: CommonDownloadDTO) {
     return this.appService.downloadSale(query.idList);
   }
+
+  @Get('/sale/margin/download')
+  async downloadMargin(@Query() query: CommonDownloadDTO) {
+    console.log(1);
+    return this.appService.downloadMargin(query.idList);
+  }
 }

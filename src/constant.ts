@@ -83,3 +83,25 @@ export const saleDownloadMapper: SaleDownloadMapper = [
   { header: '평균 이하 판매수', key: 'belowAverageCount' },
   { header: '관리자 승인여부', key: 'isConfirmed' },
 ];
+
+export type Margin = {
+  product: string;
+  isConfirmed: boolean;
+  inPrice: number;
+  outPrice: number;
+  margin: number;
+  marginRate: number;
+  outClient: string;
+};
+
+export type MarginDownloadMapper = Column<keyof Margin>[];
+
+export const marginDownloadMapper: MarginDownloadMapper = [
+  { header: '펫네임', key: 'product' },
+  { header: '판매처', key: 'outClient' },
+  { header: '관리자 승인여부', key: 'isConfirmed' },
+  { header: '판매가', key: 'outPrice' },
+  { header: '매입가', key: 'inPrice' },
+  { header: '마진', key: 'margin' },
+  { header: '마진율', key: 'marginRate' },
+];

@@ -12,6 +12,7 @@ import { Sale, SaleScheme } from 'src/scheme/sale.scheme';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './user/user.module';
 import {
+  marginDownloadMapper,
   purchaseExcelMapper,
   saleDownloadMapper,
   saleExcelMapper,
@@ -85,6 +86,10 @@ import { AuthGuard } from './common/guard/auth.guard';
     {
       provide: 'saleRankReverse',
       useValue: saleRankReverse,
+    },
+    {
+      provide: 'marginDownloadMapper',
+      useValue: marginDownloadMapper,
     },
   ],
 })
