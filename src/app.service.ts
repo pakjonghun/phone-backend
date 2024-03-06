@@ -21,6 +21,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { MarginListDTO } from './dto/margin.list.dto';
+import dayjs from 'dayjs';
+import { getNowDate } from './common/utils';
 
 @Injectable()
 export class AppService {
@@ -138,7 +140,11 @@ export class AppService {
           Array.from(clientSet).map((clientId) => ({
             updateOne: {
               filter: { _id: clientId },
-              update: {},
+              update: {
+                $set: {
+                  inDate: getNowDate(),
+                },
+              },
               upsert: true,
             },
           })),
@@ -263,7 +269,11 @@ export class AppService {
           Array.from(clientSet).map((clientId) => ({
             updateOne: {
               filter: { _id: clientId },
-              update: {},
+              update: {
+                $set: {
+                  inDate: getNowDate(),
+                },
+              },
               upsert: true,
             },
           })),
@@ -762,29 +772,57 @@ export class AppService {
   }
 
   async dashboardData() {
-    const topThreeProduct = await this.saleModel.aggregate([
+    const topTenProduct = await this.saleModel.aggregate([
+      {
+        $match: {
+          outDate: {
+            $gte: Util.GetMonthAgo(),
+          },
+        },
+      },
       {
         $group: {
           _id: '$product',
           count: { $sum: 1 },
           accPrice: { $sum: '$outPrice' },
+          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
         },
       },
       {
         $sort: {
+          accPrice: -1,
           count: -1,
         },
       },
       {
-        $limit: 3,
+        $limit: 10,
+      },
+      {
+        $addFields: {
+          marginRate: {
+            $divide: ['$accPrice', '$accMargin'],
+          },
+        },
       },
     ]);
 
-    const topThreeClient = await this.saleModel.aggregate([
+    const topTenClient = await this.saleModel.aggregate([
+      {
+        $match: {
+          outDate: {
+            $gte: Util.GetMonthAgo(),
+          },
+        },
+      },
       {
         $group: {
           _id: '$outClient',
           count: { $sum: 1 },
+          margin: {
+            $sum: {
+              $subtract: ['$outPrice', '$inPrice'],
+            },
+          },
           accPrice: { $sum: '$outPrice' },
         },
       },
@@ -795,7 +833,15 @@ export class AppService {
         },
       },
       {
-        $limit: 3,
+        $limit: 10,
+      },
+
+      {
+        $addFields: {
+          marginRate: {
+            $divide: ['$accPrice', '$accMargin'],
+          },
+        },
       },
     ]);
 
@@ -825,60 +871,22 @@ export class AppService {
       },
     ]);
 
-    const recentTenSale = await this.saleModel
-      .find({})
-      .sort({ outDate: -1 })
-      .limit(10);
+    const notVisitedOutClient = await this.clientModel.find({
+      sort: { outDate: -1 },
+      limit: 10,
+    });
 
-    const recentTenPurchase = await this.purchaseModel
-      .find({})
-      .sort({ inDate: -1 })
-      .limit(10);
-
-    const topTenClientSale = await this.saleModel.aggregate([
-      {
-        $group: {
-          _id: '$outClient',
-          count: { $sum: 1 },
-          accPrice: { $sum: '$outPrice' },
-        },
-      },
-      {
-        $sort: {
-          accPrice: -1,
-        },
-      },
-      {
-        $limit: 10,
-      },
-    ]);
-
-    const topTenClientPurchase = await this.purchaseModel.aggregate([
-      {
-        $group: {
-          _id: '$inClient',
-          count: { $sum: 1 },
-          accPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $sort: {
-          accPrice: -1,
-        },
-      },
-      {
-        $limit: 10,
-      },
-    ]);
+    const notVisitedInClient = await this.clientModel.find({
+      sort: { inDate: -1 },
+      limit: 10,
+    });
 
     return {
-      topThreeProduct,
-      topThreeClient,
+      topTenProduct,
+      topTenClient,
       totalSale: totalSale[0],
-      recentTenSale,
-      recentTenPurchase,
-      topTenClientSale,
-      topTenClientPurchase,
+      notVisitedOutClient,
+      notVisitedInClient,
     };
   }
 
