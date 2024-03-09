@@ -16,8 +16,8 @@ import {
   purchaseExcelMapper,
   saleDownloadMapper,
   saleExcelMapper,
-  saleRank,
-  saleRankReverse,
+  rank,
+  rankReverse,
 } from './constant';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -76,16 +76,16 @@ import { AuthGuard } from './common/guard/auth.guard';
       useValue: purchaseExcelMapper,
     },
     {
-      provide: 'saleRank',
-      useValue: saleRank,
+      provide: 'rank',
+      useValue: rank,
     },
     {
       provide: 'saleDownloadMapper',
       useValue: saleDownloadMapper,
     },
     {
-      provide: 'saleRankReverse',
-      useValue: saleRankReverse,
+      provide: 'rankReverse',
+      useValue: rankReverse,
     },
     {
       provide: 'marginDownloadMapper',

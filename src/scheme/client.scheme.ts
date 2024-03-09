@@ -13,11 +13,14 @@ export class Client implements IClient {
   @Prop()
   _id: string;
 
-  @Prop()
+  @Prop({ type: String })
   lastInDate: string;
 
-  @Prop()
+  @Prop({ type: String })
   lastOutDate: string;
+
+  @Prop({ type: String })
+  note: string;
 }
 
 export const ClientScheme = SchemaFactory.createForClass(Client);

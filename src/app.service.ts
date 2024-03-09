@@ -11,7 +11,7 @@ import {
   PurchaseExcelMapper,
   SaleDownloadMapper,
   SaleExcelMapper,
-  SaleRank,
+  Rank,
 } from './constant';
 import { Util } from './common/helper/service.helper';
 import * as ExcelJS from 'exceljs';
@@ -21,7 +21,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { MarginListDTO } from './dto/margin.list.dto';
-import dayjs from 'dayjs';
 import { getNowDate } from './common/utils';
 
 @Injectable()
@@ -32,10 +31,10 @@ export class AppService {
     @InjectModel(Client.name) private clientModel: Model<Client>,
     @InjectModel(Purchase.name) private purchaseModel: Model<Purchase>,
 
-    @Inject('saleRankReverse')
-    private saleRankReverse: Record<number, SaleRank>,
+    @Inject('rankReverse')
+    private saleRankReverse: Record<number, Rank>,
     @Inject('saleExcelMapper') private saleExcelMapper: SaleExcelMapper,
-    @Inject('saleRank') private saleRank: SaleRank[],
+    @Inject('rank') private rank: Record<Rank, number>,
     @Inject('saleDownloadMapper')
     private saleDownloadMapper: SaleDownloadMapper,
     @Inject('purchaseExcelMapper')
@@ -105,9 +104,7 @@ export class AppService {
               );
             }
 
-            const rank = this.saleRank.findIndex((item) =>
-              value.toString().toUpperCase().includes(item),
-            );
+            const rank = this.rank[value.toString().toUpperCase()];
             if (rank !== -1) {
               value = rank;
             } else {
@@ -234,9 +231,7 @@ export class AppService {
               );
             }
 
-            const rank = this.saleRank.findIndex((item) =>
-              value.toString().toUpperCase().includes(item),
-            );
+            const rank = this.rank[value.toString().toUpperCase()];
             if (rank !== -1) {
               value = rank;
             } else {
@@ -271,7 +266,7 @@ export class AppService {
               filter: { _id: clientId },
               update: {
                 $set: {
-                  inDate: getNowDate(),
+                  outDate: getNowDate(),
                 },
               },
               upsert: true,
@@ -372,7 +367,7 @@ export class AppService {
         const stageKey = Object.keys(item)[0];
         return stageKey === '$skip';
       });
-      pipe.splice(skipIndex, 0, { $sort: objectSortList });
+      pipe.splice(skipIndex, 0, { $sort: { ...objectSortList, _id: 1 } });
     }
 
     const data = await this.saleModel.aggregate(pipe);
@@ -452,7 +447,8 @@ export class AppService {
         const stageKey = Object.keys(item)[0];
         return stageKey === '$skip';
       });
-      pipe.splice(skipIndex, 0, { $sort: objectSortList });
+
+      pipe.splice(skipIndex, 0, { $sort: { ...objectSortList, _id: 1 } });
     }
 
     const data = await this.purchaseModel.aggregate(pipe);
@@ -516,15 +512,7 @@ export class AppService {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
 
-    worksheet.columns = [
-      { header: '펫네임', key: 'product' },
-      { header: '등급', key: 'rank' },
-      { header: '차감내역', key: 'distanceLog' },
-      { header: '최근 고가 판매가', key: 'recentHighSalePrice' },
-      { header: '최근 저가 판매가', key: 'recentLowPrice' },
-      { header: '평균 이하 판매수', key: 'belowAverageCount' },
-      { header: '관리자 승인여부', key: 'isConfirmed' },
-    ];
+    worksheet.columns = this.saleDownloadMapper;
 
     for await (const doc of stream) {
       const newDoc = {
@@ -872,12 +860,12 @@ export class AppService {
     ]);
 
     const notVisitedOutClient = await this.clientModel.find({
-      sort: { outDate: -1 },
+      sort: { outDate: -1, _id: 1 },
       limit: 10,
     });
 
     const notVisitedInClient = await this.clientModel.find({
-      sort: { inDate: -1 },
+      sort: { inDate: -1, _id: 1 },
       limit: 10,
     });
 
@@ -968,7 +956,7 @@ export class AppService {
     }) as [string, 1 | -1][];
     const objectSortList = Object.fromEntries(sortList);
     //@ts-ignore
-    pipe[0].$facet.data.splice(2, 0, { $sort: objectSortList });
+    pipe[0].$facet.data.splice(2, 0, { $sort: { ...objectSortList, _id: 1 } });
     // pipe.splice(1, 0, { $sort: objectSortList });
 
     if (startDate) {

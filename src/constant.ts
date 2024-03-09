@@ -26,7 +26,7 @@ export const saleExcelMapper: SaleExcelMapper = {
   17: 'outPrice',
 };
 
-export type SaleRank =
+export type Rank =
   | 'A+'
   | 'A-'
   | 'A'
@@ -39,22 +39,22 @@ export type SaleRank =
   | 'D'
   | 'D+'
   | 'D-';
-export const saleRank: SaleRank[] = [
-  'A+',
-  'A',
-  'A-',
-  'B+',
-  'B',
-  'B-',
-  'C+',
-  'C',
-  'C-',
-  'D+',
-  'D',
-  'D-',
-];
+export const rank: Record<Rank, number> = {
+  'A+': 0,
+  A: 1,
+  'A-': 2,
+  'B+': 3,
+  B: 4,
+  'B-': 5,
+  'C+': 6,
+  C: 7,
+  'C-': 8,
+  'D+': 9,
+  D: 10,
+  'D-': 11,
+};
 
-export const saleRankReverse: Record<number, SaleRank> = {
+export const rankReverse: Record<number, Rank> = {
   [0]: 'A+',
   [1]: 'A',
   [2]: 'A-',
