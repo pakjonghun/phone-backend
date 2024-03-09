@@ -1117,6 +1117,10 @@ export class AppService {
       { _id: id },
       { $set: { note } },
     );
+
+    if (result.modifiedCount !== 1) {
+      throw new BadRequestException('업데이트가 실패했습니다.');
+    }
   }
 
   private async unlinkExcelFile(filePath: string) {
