@@ -21,7 +21,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { promisify } from 'util';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { MarginListDTO } from './dto/margin.list.dto';
-import { getNowDate } from './common/utils';
+import * as dayjs from 'dayjs';
+import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 
 @Injectable()
 export class AppService {
@@ -45,7 +46,7 @@ export class AppService {
 
   async uploadPurchase(uploadFile: Express.Multer.File) {
     const productSet = new Set<string>();
-    const clientSet = new Set<string>();
+    const clientMap = new Map<string, string>();
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
     const newDocument = [];
     let rowCount = 0;
@@ -93,8 +94,11 @@ export class AppService {
             productSet.add(modelNumber);
           }
 
-          if (fieldName.toLowerCase().includes('client')) {
-            clientSet.add(value as string);
+          if (fieldName.toLowerCase() === 'outClient') {
+            const stringValue = value as string;
+            if (!clientMap.has(stringValue)) {
+              clientMap.set(stringValue, '');
+            }
           }
 
           if (fieldName === 'rank') {
@@ -123,36 +127,56 @@ export class AppService {
           }
         }
 
-        await this.productModel.bulkWrite(
-          Array.from(productSet).map((productId) => ({
-            updateOne: {
-              filter: { _id: productId },
-              update: {},
-              upsert: true,
-            },
-          })),
-        );
-
-        await this.clientModel.bulkWrite(
-          Array.from(clientSet).map((clientId) => ({
-            updateOne: {
-              filter: { _id: clientId },
-              update: {
-                $set: {
-                  inDate: getNowDate(),
-                },
-              },
-              upsert: true,
-            },
-          })),
-        );
-
         newPurchase.isConfirmed = false;
+
         await newPurchase.validate();
+
         const obj = newPurchase.toObject();
         delete obj._id;
+
+        const inDate = newPurchase.inDate;
+        const inClient = newPurchase.inClient as unknown as string;
+        const existClientInDate = clientMap.get(inClient);
+
+        if (existClientInDate) {
+          const isInDateLatest = dayjs(inDate).isAfter(
+            dayjs(existClientInDate),
+          );
+          if (isInDateLatest) {
+            clientMap.set(inClient, inDate);
+          }
+        }
+
+        if (!existClientInDate) {
+          clientMap.set(inClient, inDate);
+        }
+
         newDocument.push(obj);
       }
+
+      await this.productModel.bulkWrite(
+        Array.from(productSet).map((productId) => ({
+          updateOne: {
+            filter: { _id: productId },
+            update: {},
+            upsert: true,
+          },
+        })),
+      );
+
+      await this.clientModel.bulkWrite(
+        Array.from(clientMap).map(([clientId, lastInDate]) => ({
+          updateOne: {
+            filter: { _id: clientId },
+            update: {
+              $set: {
+                lastInDate,
+              },
+            },
+            upsert: true,
+          },
+        })),
+      );
 
       if (newDocument.length === 0) {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
@@ -172,7 +196,7 @@ export class AppService {
 
   async uploadSale(uploadFile: Express.Multer.File) {
     const productSet = new Set<string>();
-    const clientSet = new Set<string>();
+    const clientMap = new Map<string, string>();
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
     const newDocument = [];
     let rowCount = 0;
@@ -220,8 +244,11 @@ export class AppService {
             productSet.add(modelNumber);
           }
 
-          if (fieldName.toLowerCase().includes('client')) {
-            clientSet.add(value as string);
+          if (fieldName.toLowerCase() === 'outClient') {
+            const stringValue = value as string;
+            if (!clientMap.has(stringValue)) {
+              clientMap.set(stringValue, '');
+            }
           }
 
           if (fieldName === 'rank') {
@@ -250,42 +277,55 @@ export class AppService {
           }
         }
 
-        await this.productModel.bulkWrite(
-          Array.from(productSet).map((productId) => ({
-            updateOne: {
-              filter: { _id: productId },
-              update: {},
-              upsert: true,
-            },
-          })),
-        );
-
-        await this.clientModel.bulkWrite(
-          Array.from(clientSet).map((clientId) => ({
-            updateOne: {
-              filter: { _id: clientId },
-              update: {
-                $set: {
-                  outDate: getNowDate(),
-                },
-              },
-              upsert: true,
-            },
-          })),
-        );
-
-        newSale.isConfirmed = false;
-        await newSale.validate();
         newSale.isConfirmed = false;
         await newSale.validate();
         const obj = newSale.toObject();
+        console.log(obj);
         delete obj._id;
         newDocument.push(obj);
+
+        const outDate = newSale.outDate as string;
+        const outClient = newSale.outClient as unknown as string;
+        const existOutDate = clientMap.get(outClient);
+        if (!existOutDate) {
+          clientMap.set(outClient, outDate);
+        }
+
+        if (existOutDate) {
+          const isOutDateLastest = dayjs(outDate).isAfter(dayjs(existOutDate));
+          if (isOutDateLastest) {
+            clientMap.set(outClient, outDate);
+          }
+        }
       }
 
       if (newDocument.length === 0) {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
       }
+
+      await this.productModel.bulkWrite(
+        Array.from(productSet).map((productId) => ({
+          updateOne: {
+            filter: { _id: productId },
+            update: {},
+            upsert: true,
+          },
+        })),
+      );
+
+      await this.clientModel.bulkWrite(
+        Array.from(clientMap).map(([clientId, lastOutDate]) => ({
+          updateOne: {
+            filter: { _id: clientId },
+            update: {
+              $set: {
+                lastOutDate,
+              },
+            },
+            upsert: true,
+          },
+        })),
+      );
 
       await this.saleModel.bulkWrite(
         newDocument.map((document) => ({
@@ -774,6 +814,7 @@ export class AppService {
           count: { $sum: 1 },
           accPrice: { $sum: '$outPrice' },
           accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
+          accInPrice: { $sum: '$inPrice' },
         },
       },
       {
@@ -787,9 +828,15 @@ export class AppService {
       },
       {
         $addFields: {
+          name: '$_id',
           marginRate: {
-            $divide: ['$accPrice', '$accMargin'],
+            $divide: ['$accPrice', '$accInPrice'],
           },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
         },
       },
     ]);
@@ -806,18 +853,19 @@ export class AppService {
         $group: {
           _id: '$outClient',
           count: { $sum: 1 },
-          margin: {
+          accMargin: {
             $sum: {
               $subtract: ['$outPrice', '$inPrice'],
             },
           },
           accPrice: { $sum: '$outPrice' },
+          accInPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
-          count: -1,
           accPrice: -1,
+          count: -1,
         },
       },
       {
@@ -826,47 +874,55 @@ export class AppService {
 
       {
         $addFields: {
+          name: '$_id',
           marginRate: {
-            $divide: ['$accPrice', '$accMargin'],
+            $divide: ['$accMargin', '$accInPrice'],
           },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
         },
       },
     ]);
 
     const totalSale = await this.saleModel.aggregate([
       {
-        $match: {
-          $expr: {
-            $gt: ['$outPrice', 0],
-          },
-        },
-      },
-      {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          accPrice: { $sum: '$inPrice' },
+          accPrice: { $sum: '$outPrice' },
+          accInPrice: { $sum: '$inPrice' },
+          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
         },
       },
       {
         $sort: {
-          count: -1,
           accPrice: -1,
+          count: -1,
         },
       },
       {
         $limit: 10,
       },
+      {
+        $addFields: {
+          marginRate: {
+            $divide: ['$accPrice', '$accInPrice'],
+          },
+        },
+      },
     ]);
 
     const notVisitedOutClient = await this.clientModel
-      .find({})
-      .sort({ outDate: -1, _id: 1 })
+      .find({ lastOutDate: { $exists: true } })
+      .sort({ lastOutDate: -1, _id: 1 })
       .limit(10);
 
     const notVisitedInClient = await this.clientModel
-      .find({})
-      .sort({ inDate: -1, _id: 1 })
+      .find({ lastInDate: { $exists: true } })
+      .sort({ lastInDate: -1, _id: 1 })
       .limit(10);
 
     return {
@@ -1055,6 +1111,14 @@ export class AppService {
     const buffer = await workbook.xlsx.writeBuffer();
     return buffer;
   }
+
+  async editDashboard(id: string, { note }: EditDashboardDTO) {
+    const result = await this.clientModel.updateOne(
+      { _id: id },
+      { $set: { note } },
+    );
+  }
+
   private async unlinkExcelFile(filePath: string) {
     const unlinkAsync = promisify(fs.unlink);
     await unlinkAsync(filePath);

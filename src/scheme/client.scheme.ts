@@ -4,6 +4,7 @@ import { HydratedDocument } from 'mongoose';
 export interface IClient {
   lastInDate: string;
   lastOutDate: string;
+  note: string;
 }
 
 export type SaleDocument = HydratedDocument<Client>;

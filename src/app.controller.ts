@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   ParseFilePipe,
   Post,
   Put,
@@ -26,6 +27,7 @@ import { CommonMultiUpdateDTO } from './dto/confirm.sale.dto';
 import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { MarginListDTO } from './dto/margin.list.dto';
+import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
 @Controller()
@@ -128,5 +130,13 @@ export class AppController {
   async downloadMargin(@Query() query: CommonDownloadDTO) {
     console.log(1);
     return this.appService.downloadMargin(query.idList);
+  }
+
+  @Put('/dashboard/note/:id')
+  async editDashboardNote(
+    @Param('id') param: string,
+    @Body() body: EditDashboardDTO,
+  ) {
+    this.appService.editDashboard(param, body);
   }
 }
