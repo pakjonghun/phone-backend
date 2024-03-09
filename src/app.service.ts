@@ -859,15 +859,15 @@ export class AppService {
       },
     ]);
 
-    const notVisitedOutClient = await this.clientModel.find({
-      sort: { outDate: -1, _id: 1 },
-      limit: 10,
-    });
+    const notVisitedOutClient = await this.clientModel
+      .find({})
+      .sort({ outDate: -1, _id: 1 })
+      .limit(10);
 
-    const notVisitedInClient = await this.clientModel.find({
-      sort: { inDate: -1, _id: 1 },
-      limit: 10,
-    });
+    const notVisitedInClient = await this.clientModel
+      .find({})
+      .sort({ inDate: -1, _id: 1 })
+      .limit(10);
 
     return {
       topTenProduct,
