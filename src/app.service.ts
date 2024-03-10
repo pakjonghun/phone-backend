@@ -348,7 +348,6 @@ export class AppService {
     const filter = {
       product: { $regex: keyword, $options: 'i' },
     };
-
     const totalCount = await this.saleModel.countDocuments(filter);
     const hasNext = totalCount > page * length;
 
@@ -380,6 +379,7 @@ export class AppService {
       },
       {
         $project: {
+          outClient: 1,
           distanceLog: 1,
           isConfirmed: 1,
           product: 1,
@@ -411,7 +411,7 @@ export class AppService {
     }
 
     const data = await this.saleModel.aggregate(pipe);
-
+    console.log('data : ', data);
     return {
       totalCount,
       hasNext,
@@ -830,7 +830,12 @@ export class AppService {
         $addFields: {
           name: '$_id',
           marginRate: {
-            $divide: ['$accPrice', '$accInPrice'],
+            $multiply: [
+              {
+                $divide: ['$accMargin', '$accPrice'],
+              },
+              100,
+            ],
           },
         },
       },
@@ -876,7 +881,12 @@ export class AppService {
         $addFields: {
           name: '$_id',
           marginRate: {
-            $divide: ['$accMargin', '$accInPrice'],
+            $multiply: [
+              {
+                $divide: ['$accMargin', '$accPrice'],
+              },
+              100,
+            ],
           },
         },
       },
@@ -909,7 +919,12 @@ export class AppService {
       {
         $addFields: {
           marginRate: {
-            $divide: ['$accPrice', '$accInPrice'],
+            $multiply: [
+              {
+                $divide: ['$accMargin', '$accPrice'],
+              },
+              100,
+            ],
           },
         },
       },
