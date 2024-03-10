@@ -47,7 +47,7 @@ export function IsOrderValid(validationOptions?: ValidationOptions) {
 
 type SaleSortKey = Pick<
   ISale,
-  'product' | 'isConfirmed' | 'rank' | 'distanceLog'
+  'product' | 'isConfirmed' | 'rank' | 'distanceLog' | 'outClient'
 > &
   Omit<
     IProduct,
@@ -65,6 +65,7 @@ const saleSortKey: Record<keyof SaleSortKey, number> = {
   rank: 1,
   recentHighSalePrice: 1,
   recentLowPrice: 1,
+  outClient: 1,
 };
 
 @ValidatorConstraint({ async: false })
