@@ -18,4 +18,8 @@ export class Util {
   static GetMonthAgo() {
     return dayjs(new Date()).subtract(1, 'month').format('YYYYMMDDHHmmss');
   }
+
+  static GetToday() {
+    return dayjs(new Date()).startOf('day').format('YYYYMMDDHHmmss');
+  }
 }

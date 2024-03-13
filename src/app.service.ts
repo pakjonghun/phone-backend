@@ -899,6 +899,52 @@ export class AppService {
 
     const totalSale = await this.saleModel.aggregate([
       {
+        $match: {
+          outDate: {
+            $gte: Util.GetMonthAgo(),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          accPrice: { $sum: '$outPrice' },
+          accInPrice: { $sum: '$inPrice' },
+          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
+        },
+      },
+      {
+        $sort: {
+          accPrice: -1,
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $addFields: {
+          marginRate: {
+            $multiply: [
+              {
+                $divide: ['$accMargin', '$accPrice'],
+              },
+              100,
+            ],
+          },
+        },
+      },
+    ]);
+    const todaySale = await this.saleModel.aggregate([
+      {
+        $match: {
+          outDate: {
+            $gte: Util.GetToday(),
+          },
+        },
+      },
+      {
         $group: {
           _id: null,
           count: { $sum: 1 },
@@ -941,6 +987,7 @@ export class AppService {
       .limit(10);
 
     return {
+      todaySale,
       topTenProduct,
       topTenClient,
       totalSale: totalSale[0],
