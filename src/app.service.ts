@@ -1,5 +1,5 @@
-import { ObjectId } from 'mongodb';
 import * as fs from 'fs';
+import { ObjectId } from 'mongodb';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sale } from './scheme/sale.scheme';
@@ -108,8 +108,19 @@ export class AppService {
               );
             }
 
-            const rank = this.rank[value.toString().toUpperCase()];
-            if (rank !== -1) {
+            const matchRank = (value as string).match(
+              /[Aa][+-]?|[Bb][+-]?|[Cc][+-]?|[Dd][+-]?/,
+            );
+
+            if (!matchRank[0]) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
+              );
+            }
+
+            const rank = this.rank[matchRank[0].toUpperCase()];
+
+            if (rank != null) {
               value = rank;
             } else {
               throw new BadRequestException(
@@ -200,7 +211,6 @@ export class AppService {
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
     const newDocument = [];
     let rowCount = 0;
-
     for await (const sheet of stream) {
       for await (const row of sheet) {
         if (!row.hasValues) continue;
@@ -258,8 +268,19 @@ export class AppService {
               );
             }
 
-            const rank = this.rank[value.toString().toUpperCase()];
-            if (rank !== -1) {
+            const matchRank = (value as string).match(
+              /[Aa][+-]?|[Bb][+-]?|[Cc][+-]?|[Dd][+-]?/,
+            );
+
+            if (!matchRank[0]) {
+              throw new BadRequestException(
+                `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. (등급 A+ ~ D-까지 등급이 포함된 특이사항으로 적어주세요)`,
+              );
+            }
+
+            const rank = this.rank[matchRank[0].toUpperCase()];
+
+            if (rank != null) {
               value = rank;
             } else {
               throw new BadRequestException(
@@ -280,7 +301,6 @@ export class AppService {
         newSale.isConfirmed = false;
         await newSale.validate();
         const obj = newSale.toObject();
-        console.log(obj);
         delete obj._id;
         newDocument.push(obj);
 
@@ -411,7 +431,6 @@ export class AppService {
     }
 
     const data = await this.saleModel.aggregate(pipe);
-    console.log('data : ', data);
     return {
       totalCount,
       hasNext,
