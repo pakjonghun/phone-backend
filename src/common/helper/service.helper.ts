@@ -22,4 +22,11 @@ export class Util {
   static GetToday() {
     return dayjs(new Date()).startOf('day').format('YYYYMMDDHHmmss');
   }
+
+  static isNumber(number: unknown) {
+    if (number == null) return false;
+    if (typeof number === 'string' && number.trim() == '') return false;
+
+    return !isNaN(Number(number));
+  }
 }

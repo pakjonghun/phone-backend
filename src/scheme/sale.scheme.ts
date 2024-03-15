@@ -1,66 +1,64 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { Client } from './client.scheme';
-import { Product } from './product.scheme';
 
 export interface ISale {
-  outDate: string;
   inDate: string;
-  isConfirmed: boolean;
-  rank: number;
-  distanceLog: string | null;
-  inClient: Client;
-  outClient: Client;
-  product: Product;
+  inClient: string;
+  outDate: string;
+  outClient: string;
+  product: string;
+  _id: string;
+  imei: string;
   inPrice: number;
   outPrice: number;
+  margin: number;
+  marginRate: number;
+  note: string;
+  rank: string;
 }
 
 export type SaleDocument = HydratedDocument<Sale>;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, versionKey: false })
 export class Sale implements ISale {
-  @Prop({ type: String, required: true })
-  outDate: string;
-
-  @Prop({ type: String, required: true })
+  @Prop({ type: String })
   inDate: string;
 
-  @Prop({ type: Boolean, required: true })
-  isConfirmed: boolean;
+  @Prop({ type: String })
+  inClient: string;
 
-  @Prop({ type: Number, required: true })
-  rank: number;
+  @Prop({ type: String })
+  outDate: string;
 
-  @Prop({ type: String, required: false, default: null })
-  distanceLog: string | null;
+  @Prop({ type: String })
+  outClient;
 
-  @Prop({
-    type: String,
-    ref: Client.name,
-    required: true,
-  })
-  inClient: Client;
+  @Prop({ type: String })
+  product: string;
 
-  @Prop({
-    type: String,
-    ref: Client.name,
-    required: true,
-  })
-  outClient: Client;
+  @Prop({ type: String })
+  _id: string;
 
-  @Prop({
-    type: String,
-    ref: Product.name,
-    required: true,
-  })
-  product: Product;
+  @Prop({ type: String })
+  imei: string;
 
-  @Prop({ type: Number, required: true })
+  @Prop({ type: Number })
   inPrice: number;
 
-  @Prop({ type: Number, required: true })
+  @Prop({ type: Number })
   outPrice: number;
+
+  @Prop({ type: Number })
+  margin: number;
+
+  @Prop({ type: Number })
+  marginRate: number;
+
+  @Prop({ type: String })
+  note: string;
+
+  @Prop({ type: String })
+  rank: string;
 }
 
 export const SaleScheme = SchemaFactory.createForClass(Sale);

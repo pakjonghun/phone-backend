@@ -6,14 +6,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import * as joi from 'joi';
 import { SetUserInfoMiddleware } from 'src/common/middleware/auth.middleware';
 import { Client, ClientScheme } from 'src/scheme/client.scheme';
-import { Product, ProductSCheme } from 'src/scheme/product.scheme';
-import { Purchase, PurchaseScheme } from 'src/scheme/purchase.scheme';
 import { Sale, SaleScheme } from 'src/scheme/sale.scheme';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './user/user.module';
 import {
-  marginDownloadMapper,
-  purchaseExcelMapper,
   saleDownloadMapper,
   saleExcelMapper,
   rank,
@@ -24,6 +20,8 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptor/log.interceptor';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { AuthGuard } from './common/guard/auth.guard';
+import { PriceSale, PriceSaleScheme } from './scheme/price.sale.scheme';
+import { UploadRecord, UploadRecordScheme } from './scheme/upload.record';
 
 @Module({
   imports: [
@@ -45,9 +43,9 @@ import { AuthGuard } from './common/guard/auth.guard';
     }),
     MongooseModule.forFeature([
       { name: Client.name, schema: ClientScheme },
-      { name: Product.name, schema: ProductSCheme },
-      { name: Purchase.name, schema: PurchaseScheme },
       { name: Sale.name, schema: SaleScheme },
+      { name: PriceSale.name, schema: PriceSaleScheme },
+      { name: UploadRecord.name, schema: UploadRecordScheme },
     ]),
     UserModule,
     ScheduleModule.forRoot(),
@@ -72,10 +70,6 @@ import { AuthGuard } from './common/guard/auth.guard';
       useValue: saleExcelMapper,
     },
     {
-      provide: 'purchaseExcelMapper',
-      useValue: purchaseExcelMapper,
-    },
-    {
       provide: 'rank',
       useValue: rank,
     },
@@ -86,10 +80,6 @@ import { AuthGuard } from './common/guard/auth.guard';
     {
       provide: 'rankReverse',
       useValue: rankReverse,
-    },
-    {
-      provide: 'marginDownloadMapper',
-      useValue: marginDownloadMapper,
     },
   ],
 })

@@ -6,7 +6,6 @@ import {
 } from 'class-validator';
 import { Order } from '../type';
 import { ISale } from 'src/scheme/sale.scheme';
-import { IProduct } from 'src/scheme/product.scheme';
 
 const order: Record<Order, number> = {
   [1]: 1,
@@ -45,27 +44,21 @@ export function IsOrderValid(validationOptions?: ValidationOptions) {
   };
 }
 
-type SaleSortKey = Pick<
-  ISale,
-  'product' | 'isConfirmed' | 'rank' | 'distanceLog' | 'outClient'
-> &
-  Omit<
-    IProduct,
-    | '_id'
-    | 'recentHighPurchasePrice'
-    | 'recentLowPurchasePrice'
-    | 'belowAveragePurchaseCount'
-  >;
+type SaleSortKey = ISale;
 
-const saleSortKey: Record<keyof SaleSortKey, number> = {
-  product: 1,
-  belowAverageCount: 1,
-  distanceLog: 1,
-  isConfirmed: 1,
-  rank: 1,
-  recentHighSalePrice: 1,
-  recentLowPrice: 1,
+const saleSortKey: Record<keyof Omit<SaleSortKey, '_id'>, number> = {
+  inDate: 1,
+  inClient: 1,
+  outDate: 1,
   outClient: 1,
+  product: 1,
+  imei: 1,
+  inPrice: 1,
+  outPrice: 1,
+  margin: 1,
+  marginRate: 1,
+  note: 1,
+  rank: 1,
 };
 
 @ValidatorConstraint({ async: false })
@@ -93,22 +86,12 @@ export function IsSortKeyValid(validationOptions?: ValidationOptions) {
   };
 }
 
-type PurchaseSortKey = Pick<
-  ISale,
-  'product' | 'isConfirmed' | 'rank' | 'distanceLog'
-> &
-  Omit<
-    IProduct,
-    '_id' | 'recentHighSalePrice' | 'recentLowPrice' | 'belowAverageCount'
-  >;
+type PurchaseSortKey = 'product' | 'isConfirmed' | 'rank' | 'distanceLog';
 
-const purchaseSortKey: Record<keyof PurchaseSortKey, number> = {
-  recentHighPurchasePrice: 1,
-  recentLowPurchasePrice: 1,
-  belowAveragePurchaseCount: 1,
-  product: 1,
+const purchaseSortKey: Record<Partial<PurchaseSortKey>, number> = {
   distanceLog: 1,
   isConfirmed: 1,
+  product: 1,
   rank: 1,
 };
 

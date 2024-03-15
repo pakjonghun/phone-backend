@@ -1,29 +1,20 @@
 import { Column } from './common/type';
-import { Product } from './scheme/product.scheme';
-import { IPurchase } from './scheme/purchase.scheme';
-import { ISale, Sale } from './scheme/sale.scheme';
-
-export type PurchaseExcelMapper = Record<number, keyof IPurchase>;
-export const purchaseExcelMapper: PurchaseExcelMapper = {
-  1: 'inDate',
-  3: 'inClient',
-  6: 'product',
-  19: 'rank',
-  18: 'inPrice',
-  17: 'distanceLog',
-};
+import { ISale } from './scheme/sale.scheme';
 
 export type SaleExcelMapper = Record<number, keyof ISale>;
 export const saleExcelMapper: SaleExcelMapper = {
-  3: 'outDate',
   1: 'inDate',
-  7: 'product',
-  28: 'rank',
-  26: 'distanceLog',
   2: 'inClient',
+  3: 'outDate',
   4: 'outClient',
+  7: 'product',
+  8: '_id',
+  9: 'imei',
   13: 'inPrice',
   17: 'outPrice',
+  18: 'margin',
+  19: 'marginRate',
+  28: 'note',
 };
 
 export type Rank =
@@ -69,39 +60,19 @@ export const rankReverse: Record<number, Rank> = {
   [11]: 'D-',
 };
 
-export type SaleDownloadMapper = Column<
-  keyof (Product &
-    Pick<Sale, 'product' | 'distanceLog' | 'isConfirmed' | 'rank' | 'outPrice'>)
->[];
+export type SaleDownloadMapper = Column<keyof ISale>[];
 
 export const saleDownloadMapper: SaleDownloadMapper = [
-  { header: '펫네임', key: 'product' },
-  { header: '등급', key: 'rank' },
-  { header: '차감내역', key: 'distanceLog' },
-  { header: '최근 고가 판매가', key: 'recentHighSalePrice' },
-  { header: '최근 저가 판매가', key: 'recentLowPrice' },
-  { header: '평균 이하 판매수', key: 'belowAverageCount' },
-  { header: '관리자 승인여부', key: 'isConfirmed' },
-];
-
-export type Margin = {
-  product: string;
-  isConfirmed: boolean;
-  inPrice: number;
-  outPrice: number;
-  margin: number;
-  marginRate: number;
-  outClient: string;
-};
-
-export type MarginDownloadMapper = Column<keyof Margin>[];
-
-export const marginDownloadMapper: MarginDownloadMapper = [
-  { header: '펫네임', key: 'product' },
+  { header: '매입일', key: 'inDate' },
+  { header: '매입처', key: 'inClient' },
+  { header: '판매일', key: 'outDate' },
   { header: '판매처', key: 'outClient' },
-  { header: '관리자 승인여부', key: 'isConfirmed' },
-  { header: '판매가', key: 'outPrice' },
-  { header: '매입가', key: 'inPrice' },
-  { header: '마진', key: 'margin' },
-  { header: '마진율', key: 'marginRate' },
+  { header: '펫네임', key: 'product' },
+  { header: '일련번호', key: '_id' },
+  { header: 'IMEI', key: 'imei' },
+  { header: '실매입가', key: 'inPrice' },
+  { header: '실판매가', key: 'outPrice' },
+  { header: '손익', key: 'margin' },
+  { header: '수익율', key: 'marginRate' },
+  { header: '특이사항', key: 'note' },
 ];

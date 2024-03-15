@@ -13,7 +13,7 @@ export class FallbackFilter implements ExceptionFilter {
         const error = matchError.replace(/[\{\}\"]/g, '');
         const splited = error.trim().split(':');
         if (splited.length === 2) {
-          message = `${splited[0].trim()}로 입력된 ${splited[1].trim()}는 이미 존재하는 값입니다.`;
+          message = `${splited[0].trim()}로 입력된 ${splited[1].trim()}는 이미 입력된 일련번호 입니다.`;
         }
       }
     }

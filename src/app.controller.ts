@@ -23,10 +23,7 @@ import {
   EXCEL_FILE_SIZE_LIMIT,
 } from './common/constant';
 import { SaleListDTO } from './dto/sale.list.dto';
-import { CommonMultiUpdateDTO } from './dto/confirm.sale.dto';
 import { CommonDownloadDTO } from './dto/download.sale.dto';
-import { PurchaseListDTO } from './dto/purchase.list.dto';
-import { MarginListDTO } from './dto/margin.list.dto';
 import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 // import { SaleListDTO } from './dto/saleList.dto';
 
@@ -51,58 +48,10 @@ export class AppController {
     await this.appService.uploadSale(file);
   }
 
-  @Post('purchase/upload')
-  @UseInterceptors(FileInterceptor('file', { storage }))
-  async uploadPurchase(
-    @UploadedFile(
-      new ParseFilePipe({
-        errorHttpStatusCode: 400,
-        validators: [
-          new FileSizeValidator({ size: EXCEL_FILE_SIZE_LIMIT }),
-          new FileTypeValidator({ allowType: ALLOW_EXCEL_FILE_TYPE_LIST }),
-        ],
-      }),
-    )
-    file: Express.Multer.File,
-  ) {
-    await this.appService.uploadPurchase(file);
-  }
-
   @Get('/sale')
   async saleList(@Query() query: SaleListDTO) {
     const result = await this.appService.saleList(query);
     return result;
-  }
-
-  @Get('/purchase')
-  async purchaseList(@Query() query: PurchaseListDTO) {
-    const result = await this.appService.purchaseList(query);
-    return result;
-  }
-
-  @Put('/sale')
-  async saleConfirm(@Body() body: CommonMultiUpdateDTO) {
-    await this.appService.confirmSale(body.idList);
-  }
-
-  @Put('/purchase')
-  async purchaseConfirm(@Body() body: CommonMultiUpdateDTO) {
-    await this.appService.confirmPurchase(body.idList);
-  }
-
-  @Get('/sale/apply')
-  async applySale() {
-    await this.appService.calculateProduct();
-  }
-
-  @Get('/purchase/apply')
-  async applyPurchase() {
-    await this.appService.calculateProductByPurchase();
-  }
-
-  @Get('/purchase/download')
-  async downloadPurchase(@Query() query: CommonDownloadDTO) {
-    return this.appService.downloadPurchase(query.idList);
   }
 
   @Get('/dashboard')
@@ -115,21 +64,9 @@ export class AppController {
     await this.appService.reset();
   }
 
-  @Get('margin')
-  async margin(@Query() query: MarginListDTO) {
-    const result = await this.appService.minusMargin(query);
-    return result;
-  }
-
   @Get('/sale/download')
   async downloadSale(@Query() query: CommonDownloadDTO) {
     return this.appService.downloadSale(query.idList);
-  }
-
-  @Get('/sale/margin/download')
-  async downloadMargin(@Query() query: CommonDownloadDTO) {
-    console.log(1);
-    return this.appService.downloadMargin(query.idList);
   }
 
   @Put('/dashboard/note/:id')
@@ -138,5 +75,16 @@ export class AppController {
     @Body() body: EditDashboardDTO,
   ) {
     this.appService.editDashboard(param, body);
+  }
+
+  @Get('/upload/record')
+  async uploadRecordList() {
+    const result = await this.appService.uploadRecordList();
+    return result;
+  }
+
+  @Delete('/upload/delete')
+  async deleteRecordByTime(@Body('time') time: Date) {
+    await this.appService.deleteRecordByTime(time);
   }
 }

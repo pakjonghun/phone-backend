@@ -2,20 +2,20 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export interface IClient {
-  lastInDate: string;
+  backupLastOutDate: string;
   lastOutDate: string;
   note: string;
 }
 
 export type SaleDocument = HydratedDocument<Client>;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, versionKey: false })
 export class Client implements IClient {
   @Prop()
   _id: string;
 
   @Prop({ type: String })
-  lastInDate: string;
+  backupLastOutDate: string;
 
   @Prop({ type: String })
   lastOutDate: string;

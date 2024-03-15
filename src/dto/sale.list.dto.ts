@@ -23,7 +23,6 @@ export class SaleListDTO {
   })
   @IsString()
   keyword: string;
-
   @Transform((params) => {
     const value = Number(params.value);
     return isNaN(value) ? params.value : value;
