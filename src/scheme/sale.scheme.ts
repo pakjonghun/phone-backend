@@ -15,6 +15,7 @@ export interface ISale {
   marginRate: number;
   note: string;
   rank: string;
+  uploadId: string;
 }
 
 export type SaleDocument = HydratedDocument<Sale>;
@@ -59,6 +60,9 @@ export class Sale implements ISale {
 
   @Prop({ type: String })
   rank: string;
+
+  @Prop({ type: String })
+  uploadId: string;
 }
 
 export const SaleScheme = SchemaFactory.createForClass(Sale);

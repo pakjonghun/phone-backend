@@ -25,7 +25,6 @@ import {
 import { SaleListDTO } from './dto/sale.list.dto';
 import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { EditDashboardDTO } from './dto/edit.dashboard.dto';
-// import { SaleListDTO } from './dto/saleList.dto';
 
 @Controller()
 export class AppController {
@@ -54,11 +53,6 @@ export class AppController {
     return result;
   }
 
-  @Get('/dashboard')
-  async dashboard() {
-    return this.appService.dashboardData();
-  }
-
   @Delete('reset')
   async reset() {
     await this.appService.reset();
@@ -79,12 +73,53 @@ export class AppController {
 
   @Get('/upload/record')
   async uploadRecordList() {
-    const result = await this.appService.uploadRecordList();
+    const result = await this.appService.getUploadRecordList();
     return result;
   }
 
   @Delete('/upload/delete')
-  async deleteRecordByTime(@Body('time') time: Date) {
-    await this.appService.deleteRecordByTime(time);
+  async deleteRecordByTime(@Body('uploadId') uploadId: string) {
+    await this.appService.deleteRecordByTime(uploadId);
+  }
+
+  @Get('/dashboard/month-sale')
+  async getMonthSale() {
+    const result = await this.appService.getMonthSale();
+    return result;
+  }
+
+  @Get('/dashboard/today-sale')
+  async getTodaySale() {
+    const result = await this.appService.getTodaySale();
+    return result;
+  }
+
+  @Get('/dashboard/month-product')
+  async getMonthTopProduct() {
+    const result = await this.appService.getMonthTopProduct();
+    return result;
+  }
+  @Get('/dashboard/today-product')
+  async getTodayTopProduct() {
+    const result = await this.appService.getTodayTopProduct();
+    return result;
+  }
+
+  @Get('/dashboard/month-client')
+  async getMonthTopClient() {
+    const result = await this.appService.getMonthTopClient();
+    return result;
+  }
+
+  @Get('/dashboard/today-client')
+  async getTodayTopClient() {
+    const result = await this.appService.getTodayTopClient();
+    return result;
+  }
+
+  @Get('/dashboard/visit-client')
+  async getVisitClient() {
+    const result = await this.appService.getVisitClient();
+    return result;
   }
 }

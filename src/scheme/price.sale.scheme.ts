@@ -8,6 +8,7 @@ export interface IPriceSale {
   _id: string;
   inPrice: number;
   outPrice: number;
+  uploadId: string;
 }
 
 export type PriceSaleDocument = HydratedDocument<IPriceSale>;
@@ -31,6 +32,9 @@ export class PriceSale implements IPriceSale {
 
   @Prop({ type: Number })
   outPrice: number;
+
+  @Prop({ type: String })
+  uploadId: string;
 }
 
 export const PriceSaleScheme = SchemaFactory.createForClass(PriceSale);

@@ -46,20 +46,21 @@ export function IsOrderValid(validationOptions?: ValidationOptions) {
 
 type SaleSortKey = ISale;
 
-const saleSortKey: Record<keyof Omit<SaleSortKey, '_id'>, number> = {
-  inDate: 1,
-  inClient: 1,
-  outDate: 1,
-  outClient: 1,
-  product: 1,
-  imei: 1,
-  inPrice: 1,
-  outPrice: 1,
-  margin: 1,
-  marginRate: 1,
-  note: 1,
-  rank: 1,
-};
+const saleSortKey: Record<keyof Omit<SaleSortKey, '_id' | 'uploadId'>, number> =
+  {
+    inDate: 1,
+    inClient: 1,
+    outDate: 1,
+    outClient: 1,
+    product: 1,
+    imei: 1,
+    inPrice: 1,
+    outPrice: 1,
+    margin: 1,
+    marginRate: 1,
+    note: 1,
+    rank: 1,
+  };
 
 @ValidatorConstraint({ async: false })
 class IsSortKeyValidConstraint implements ValidatorConstraintInterface {

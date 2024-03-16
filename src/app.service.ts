@@ -1,10 +1,10 @@
+import { ObjectId } from 'mongodb';
 import * as fs from 'fs';
 
-import { ObjectId } from 'mongodb';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sale } from './scheme/sale.scheme';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Client } from './scheme/client.scheme';
 import { SaleDownloadMapper, SaleExcelMapper, Rank } from './constant';
 import { Util } from './common/helper/service.helper';
@@ -35,6 +35,9 @@ export class AppService {
   ) {}
 
   async uploadSale(uploadFile: Express.Multer.File) {
+    const recordDoc = new this.uploadRecordModel();
+    await recordDoc.save();
+
     const productSet = new Set<string>();
     const clientMap = new Map<string, string>();
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
@@ -100,41 +103,6 @@ export class AppService {
             }
           }
 
-          if (fieldName === 'rank') {
-            if (!value) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 등급 A+ 부터 D-까지 등급이 포함된 특이사항으로 적어주세요 예) 잔기스 A- `,
-              );
-            }
-
-            const matchRank = (value as string).match(
-              /[Aa][+-]?|[Bb][+-]?|[Cc][+-]?|[Dd][+-]?/,
-            );
-
-            if (!matchRank[0]) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 등급 A+ 부터 D-까지 등급이 포함된 특이사항으로 적어주세요 예) 잔기스 A- `,
-              );
-            }
-
-            const rank = this.rank[matchRank[0].toUpperCase()];
-
-            if (rank != null) {
-              value = rank;
-            } else {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 등급 A+ 부터 D-까지 등급이 포함된 특이사항으로 적어주세요 예) 잔기스 A- `,
-              );
-            }
-          }
-          if (fieldName.toLowerCase().includes('price')) {
-            if (!Util.isNumber(value)) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 가격을 숫자로 입력해주세요. `,
-              );
-            }
-          }
-
           newSale[fieldName as string] = value;
 
           const isExist = newPriceSale.schema.path(fieldName);
@@ -149,6 +117,8 @@ export class AppService {
           }
         }
 
+        newSale.uploadId = recordDoc._id as string;
+        newPriceSale.uploadId = recordDoc._id as string;
         await newSale.validate();
         await newPriceSale.validate();
         const obj = newSale.toObject();
@@ -175,23 +145,62 @@ export class AppService {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
       }
 
+      const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
+      const existClients = await this.clientModel.find({
+        _id: { $in: clientIds },
+      });
+
+      const existClientList = new Map();
+      const notExistClientList = new Map();
+
+      clientMap.forEach((value, key) => {
+        const existClientIndex = existClients.findIndex(
+          (item) => item._id === key,
+        );
+        if (existClientIndex == -1) {
+          notExistClientList.set(key, value);
+        } else {
+          existClientList.set(key, value);
+        }
+      });
+
+      const insertClientList = Array.from(notExistClientList).map(
+        ([_id, lastOutDate]) =>
+          new this.clientModel({
+            _id,
+            lastOutDate,
+            uploadId: recordDoc._id as mongoose.Types.ObjectId,
+            backupLastOutDate: [],
+          }),
+      );
+
+      await this.clientModel.insertMany(insertClientList);
       await this.clientModel.bulkWrite(
-        Array.from(clientMap).map(([clientId, lastOutDate]) => ({
+        Array.from(existClientList).map(([clientId, lastOutDate]) => ({
           updateOne: {
-            filter: { _id: clientId },
+            filter: { _id: clientId, lastOutDate: { $lt: lastOutDate } },
             update: [
               {
                 $set: {
-                  backupLastOutDate: '$lastOutDate',
+                  backupLastOutDate: {
+                    $concatArrays: ['$backupLastOutDate', ['$lastOutDate']],
+                  },
                 },
               },
               {
                 $set: {
+                  backupUploadId: {
+                    $concatArrays: ['$backupUploadId', ['$uploadId']],
+                  },
+                },
+              },
+              {
+                $set: {
+                  uploadId: recordDoc._id as mongoose.Types.ObjectId,
                   lastOutDate,
                 },
               },
             ],
-            upsert: true,
           },
         })),
       );
@@ -241,8 +250,6 @@ export class AppService {
     }
 
     await this.unlinkExcelFile(uploadFile.path);
-    const recordDoc = new this.uploadRecordModel();
-    await recordDoc.save();
   }
 
   async saleList({
@@ -256,7 +263,11 @@ export class AppService {
     };
     const totalCount = await this.saleModel.countDocuments(filter);
     const hasNext = totalCount > page * length;
-    const sortObj = Object.fromEntries(sort);
+    const parseSort = sort.map(([sortKey, sortValue]) => [
+      sortKey,
+      Number(sortValue),
+    ]);
+    const sortObj = Object.fromEntries(parseSort);
     const data = await this.saleModel
       .find(filter)
       .sort({ ...sortObj, _id: 1 })
@@ -271,54 +282,7 @@ export class AppService {
   }
 
   async downloadSale(idList: string[]) {
-    type Result = {
-      distanceLog: 1;
-      product: string;
-      rank: number;
-      recentHighSalePrice: number;
-      recentLowPrice: number;
-      belowAverageCount: number;
-      isConfirmed: boolean;
-    };
-
-    const objectIds = idList.map((id) => new ObjectId(id));
-    const stream = await this.saleModel.aggregate<Result>([
-      {
-        $match: { _id: { $in: objectIds } },
-      },
-      {
-        $lookup: {
-          from: 'products',
-          foreignField: '_id',
-          localField: 'product',
-          as: 'product',
-        },
-      },
-      {
-        $unwind: '$product',
-      },
-      {
-        $addFields: {
-          product: '$product._id',
-          recentHighSalePrice: '$product.recentHighSalePrice',
-          recentLowPrice: '$product.recentLowPrice',
-          belowAverageCount: '$product.belowAverageCount',
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          distanceLog: 1,
-          product: 1,
-          rank: 1,
-          recentHighSalePrice: 1,
-          recentLowPrice: 1,
-          belowAverageCount: 1,
-          isConfirmed: 1,
-        },
-      },
-    ]);
-
+    const stream = await this.saleModel.find({ _id: { $in: idList } });
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
 
@@ -326,13 +290,18 @@ export class AppService {
 
     for await (const doc of stream) {
       const newDoc = {
+        inDate: doc.inDate,
+        inClient: doc.inClient,
+        outDate: doc.outDate,
+        outClient: doc.outClient,
         product: doc.product,
-        rank: this.saleRankReverse[doc.rank] ?? '',
-        distanceLog: doc.distanceLog ?? '',
-        recentHighSalePrice: doc.recentHighSalePrice,
-        recentLowPrice: doc.recentLowPrice,
-        belowAverageCount: doc.belowAverageCount,
-        isConfirmed: doc.isConfirmed ? '승인대기' : '승인완료',
+        _id: doc._id,
+        imei: doc.imei,
+        inPrice: doc.inPrice,
+        outPrice: doc.outPrice,
+        margin: doc.margin,
+        marginRate: doc.marginRate,
+        note: doc.note,
       };
 
       worksheet.addRow(newDoc);
@@ -342,7 +311,7 @@ export class AppService {
     return buffer;
   }
 
-  async dashboardData() {
+  async getMonthSale() {
     const monthSale = await this.priceSaleModel.aggregate([
       {
         $match: {
@@ -377,6 +346,10 @@ export class AppService {
       },
     ]);
 
+    return monthSale[0];
+  }
+
+  async getTodaySale() {
     const todaySale = await this.priceSaleModel.aggregate([
       {
         $match: {
@@ -411,6 +384,10 @@ export class AppService {
       },
     ]);
 
+    return todaySale[0];
+  }
+
+  async getMonthTopProduct() {
     const monthTopProduct = await this.priceSaleModel.aggregate([
       {
         $match: {
@@ -457,57 +434,10 @@ export class AppService {
       },
     ]);
 
-    const monthTopClient = await this.saleModel.aggregate([
-      {
-        $match: {
-          outDate: {
-            $gte: Util.GetMonthAgo(),
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$outClient',
-          count: { $sum: 1 },
-          accMargin: {
-            $sum: {
-              $subtract: ['$outPrice', '$inPrice'],
-            },
-          },
-          accPrice: { $sum: '$outPrice' },
-          accInPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $sort: {
-          accPrice: -1,
-          count: -1,
-        },
-      },
-      {
-        $limit: 10,
-      },
+    return monthTopProduct;
+  }
 
-      {
-        $addFields: {
-          name: '$_id',
-          marginRate: {
-            $multiply: [
-              {
-                $divide: ['$accMargin', '$accPrice'],
-              },
-              100,
-            ],
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-        },
-      },
-    ]);
-
+  async getTodayTopProduct() {
     const todayTopProduct = await this.priceSaleModel.aggregate([
       {
         $match: {
@@ -554,6 +484,64 @@ export class AppService {
       },
     ]);
 
+    return todayTopProduct;
+  }
+
+  getMonthTopClient = async () => {
+    const monthTopClient = await this.saleModel.aggregate([
+      {
+        $match: {
+          outDate: {
+            $gte: Util.GetMonthAgo(),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$outClient',
+          count: { $sum: 1 },
+          accMargin: {
+            $sum: {
+              $subtract: ['$outPrice', '$inPrice'],
+            },
+          },
+          accPrice: { $sum: '$outPrice' },
+          accInPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $sort: {
+          accPrice: -1,
+          count: -1,
+        },
+      },
+      {
+        $limit: 10,
+      },
+
+      {
+        $addFields: {
+          name: '$_id',
+          accMarginRate: {
+            $multiply: [
+              {
+                $divide: ['$accMargin', '$accPrice'],
+              },
+              100,
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+        },
+      },
+    ]);
+    return monthTopClient;
+  };
+
+  getTodayTopClient = async () => {
     const todayTopClient = await this.saleModel.aggregate([
       {
         $match: {
@@ -588,7 +576,7 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          marginRate: {
+          accMarginRate: {
             $multiply: [
               {
                 $divide: ['$accMargin', '$accPrice'],
@@ -604,21 +592,16 @@ export class AppService {
         },
       },
     ]);
+    return todayTopClient;
+  };
 
+  async getVisitClient() {
     const notVisitedOutClient = await this.clientModel
       .find({ lastOutDate: { $exists: true } })
       .sort({ lastOutDate: -1, _id: 1 })
       .limit(10);
 
-    return {
-      monthSale,
-      todaySale,
-      monthTopProduct,
-      monthTopClient,
-      todayTopProduct,
-      todayTopClient,
-      notVisitedOutClient,
-    };
+    return notVisitedOutClient;
   }
 
   async reset() {
@@ -628,7 +611,7 @@ export class AppService {
     await this.clientModel.deleteMany();
   }
 
-  async uploadRecordList() {
+  async getUploadRecordList() {
     return this.uploadRecordModel.find({});
   }
 
@@ -643,45 +626,60 @@ export class AppService {
     }
   }
 
-  async deleteRecordByTime(time: Date) {
+  async deleteRecordByTime(uploadId: string) {
     await this.uploadRecordModel.deleteOne({
-      createdAt: time,
+      _id: uploadId,
     });
 
     await this.saleModel.deleteMany({
-      $or: [
-        {
-          updatedAt: time,
-        },
-        {
-          createdAt: time,
-        },
-      ],
+      uploadId,
     });
     await this.priceSaleModel.deleteMany({
-      createdAt: time,
+      uploadId,
     });
 
-    await this.priceSaleModel.aggregate([
+    await this.clientModel.deleteMany({
+      uploadId: new ObjectId(uploadId),
+      backupLastOutDate: { $size: 0 },
+    });
+
+    await this.clientModel.updateMany(
       {
-        $match: {
-          createdAt: time,
-        },
+        uploadId: new ObjectId(uploadId),
       },
-      {
-        $addFields: {
-          lastOutDate: '$backupLastOutDate',
-          backupLastOutDate: null,
+      [
+        {
+          $set: {
+            lastOutDate: { $arrayElemAt: ['$backupLastOutDate', -1] }, // 배열의 마지막 요소
+          },
         },
-      },
-      {
-        $merge: {
-          into: 'clients',
-          on: '_id',
-          whenMatched: 'replace',
+        {
+          $set: {
+            uploadId: { $arrayElemAt: ['$backupUploadId', -1] }, // 배열의 마지막 요소
+          },
         },
-      },
-    ]);
+        {
+          $set: {
+            backupLastOutDate: {
+              $slice: [
+                '$backupLastOutDate',
+                { $subtract: [{ $size: '$backupLastOutDate' }, 1] },
+              ],
+            },
+          },
+        },
+        {
+          $set: {
+            backupUploadId: {
+              $slice: [
+                '$backupUploadId',
+                { $subtract: [{ $size: '$backupUploadId' }, 1] },
+              ],
+            },
+          },
+        },
+      ],
+    );
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
