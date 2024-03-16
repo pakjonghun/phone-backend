@@ -443,6 +443,7 @@ export class AppService {
         $match: {
           outDate: {
             $gte: Util.GetToday(),
+            $lte: Util.GetTodayEnd(),
           },
         },
       },
@@ -547,6 +548,7 @@ export class AppService {
         $match: {
           outDate: {
             $gte: Util.GetToday(),
+            $lte: Util.GetTodayEnd(),
           },
         },
       },

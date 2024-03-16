@@ -23,6 +23,10 @@ export class Util {
     return dayjs(new Date()).startOf('day').format('YYYYMMDDHHmmss');
   }
 
+  static GetTodayEnd() {
+    return dayjs(new Date()).endOf('day').format('YYYYMMDDHHmmss');
+  }
+
   static isNumber(number: unknown) {
     if (number == null) return false;
     if (typeof number === 'string' && number.trim() == '') return false;
