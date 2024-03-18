@@ -400,14 +400,14 @@ export class AppService {
         $group: {
           _id: '$product',
           count: { $sum: 1 },
-          accPrice: { $sum: '$outPrice' },
+          accOutPrice: { $sum: '$outPrice' },
           accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
           accInPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
-          accPrice: -1,
+          accOutPrice: -1,
           count: -1,
         },
       },
@@ -451,14 +451,14 @@ export class AppService {
         $group: {
           _id: '$product',
           count: { $sum: 1 },
-          accPrice: { $sum: '$outPrice' },
+          accOutPrice: { $sum: '$outPrice' },
           accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
           accInPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
-          accPrice: -1,
+          accOutPrice: -1,
           count: -1,
         },
       },
