@@ -7,7 +7,6 @@ export interface ISale {
   outDate: string;
   outClient: string;
   product: string;
-  _id: string;
   imei: string;
   inPrice: number;
   outPrice: number;
@@ -36,9 +35,6 @@ export class Sale implements ISale {
 
   @Prop({ type: String })
   product: string;
-
-  @Prop({ type: String })
-  _id: string;
 
   @Prop({ type: String })
   imei: string;

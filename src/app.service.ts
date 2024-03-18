@@ -94,11 +94,10 @@ export class AppService {
               clientMap.set(stringValue, '');
             }
           }
-
-          if (fieldName === '_id') {
+          if (fieldName === 'imei') {
             if (!value) {
               throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 일련번호를 입력해주세요.`,
+                `엑셀 파일에 ${cell.$col$row}위치에 IMEI를 입력해주세요.`,
               );
             }
           }
@@ -205,32 +204,25 @@ export class AppService {
         })),
       );
 
-      const ids = newDocument.map((item) => item._id);
-      const hasSameId = ids.length !== new Set(ids).size;
+      const imeis = newDocument.map((item) => item.imei);
+      const hasSameId = imeis.length !== new Set(imeis).size;
       if (hasSameId) {
         throw new BadRequestException(
-          '엑셀파일에 같은 일련번호가 입력되어 있습니다. 중복되는 일련번호가 제거해주세요.',
+          '엑셀파일에 같은 IMEI가 입력되어 있습니다. 중복되는 IMEI 제거해주세요.',
         );
       }
 
-      const duplicatedItems = await this.saleModel.find({ _id: { $in: ids } });
+      const duplicatedItems = await this.saleModel.find({
+        imei: { $in: imeis },
+        createdAt: {
+          $gt: dayjs().startOf('day'),
+          $lt: dayjs().endOf('day'),
+        },
+      });
       if (duplicatedItems.length) {
         const duplicatedIds = duplicatedItems.map((item) => item._id).join(',');
         throw new BadRequestException(
-          `${duplicatedIds}는 이미 입력되어 있는 일련번호 입니다.`,
-        );
-      }
-
-      const priceIds = newPriceSaleDocument.map((item) => item._id);
-      const duplicatedPriceItems = await this.priceSaleModel.find({
-        _id: { $in: priceIds },
-      });
-      if (duplicatedPriceItems.length) {
-        const duplicatedPriceIds = duplicatedPriceItems
-          .map((item) => item._id)
-          .join(',');
-        throw new BadRequestException(
-          `${duplicatedPriceIds}는 이미 입력되어 있는 일련번호 입니다.`,
+          `${duplicatedIds}는 이미 입력되어 있는 IMEI입니다.`,
         );
       }
 

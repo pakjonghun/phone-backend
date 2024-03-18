@@ -5,7 +5,6 @@ export interface IPriceSale {
   outDate: string;
   outClient: string;
   product: string;
-  _id: string;
   inPrice: number;
   outPrice: number;
   uploadId: string;
@@ -23,9 +22,6 @@ export class PriceSale implements IPriceSale {
 
   @Prop({ type: String })
   product: string;
-
-  @Prop({ type: String })
-  _id: string;
 
   @Prop({ type: Number })
   inPrice: number;
