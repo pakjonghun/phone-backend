@@ -417,7 +417,7 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          marginRate: {
+          accMarginRate: {
             $multiply: [
               {
                 $divide: ['$accMargin', '$accPrice'],
@@ -468,7 +468,7 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          marginRate: {
+          accMarginRate: {
             $multiply: [
               {
                 $divide: ['$accMargin', '$accPrice'],
