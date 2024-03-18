@@ -287,7 +287,17 @@ export class AppService {
   }
 
   async downloadSale(idList: string[]) {
-    const stream = await this.saleModel.find({ _id: { $in: idList } });
+    console.log(idList);
+    const promises = idList.map((item) => {
+      const split = item.split('_');
+      const imei = split[0];
+      const outDate = split[1];
+      return this.saleModel.findOne({ imei, outDate });
+    });
+
+    const stream = await Promise.all(promises);
+
+    // const stream = await this.saleModel.find({ _id: { $in: idList } });
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
 
