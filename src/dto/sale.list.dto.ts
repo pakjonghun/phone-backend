@@ -1,8 +1,13 @@
 import { Transform } from 'class-transformer';
-import { IsArray, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsDate,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { Order } from 'src/common/type';
-import { isDayjsDate } from 'src/common/validation/isDayjsDate';
-import { CustomValid } from 'src/common/validation/isKeyof.validation';
 import {
   IsOrderValid,
   IsSortKeyValid,
@@ -42,10 +47,15 @@ export class SaleListDTO {
   length: number;
 
   @IsOptional()
-  @CustomValid(isDayjsDate)
-  startDate: string;
+  @Transform((param) => {
+    console.log('startDate', param.value);
+    return new Date(param.value);
+  })
+  @IsDate()
+  startDate: Date;
 
   @IsOptional()
-  @CustomValid(isDayjsDate)
-  endDate: string;
+  @Transform((param) => new Date(param.value))
+  @IsDate()
+  endDate: Date;
 }

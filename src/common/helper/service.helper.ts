@@ -27,10 +27,18 @@ export class Util {
     return dayjs(new Date()).endOf('day').format('YYYYMMDDHHmmss');
   }
 
-  static isNumber(number: unknown) {
+  static IsNumber(number: unknown) {
     if (number == null) return false;
     if (typeof number === 'string' && number.trim() == '') return false;
 
     return !isNaN(Number(number));
+  }
+
+  static YearAgo() {
+    return dayjs().subtract(1, 'year').format('YYYYMMDDHHmmss');
+  }
+
+  static MonthAfter() {
+    return dayjs().add(1, 'month').format('YYYYMMDDHHmmss');
   }
 }

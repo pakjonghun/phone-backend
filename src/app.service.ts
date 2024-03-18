@@ -249,9 +249,22 @@ export class AppService {
     length,
     page,
     sort = [['updatedAt', -1]],
+    startDate,
+    endDate,
   }: SaleListDTO) {
     const filter = {
-      product: { $regex: keyword, $options: 'i' },
+      product: {
+        $regex: keyword,
+        $options: 'i',
+      },
+      outDate: {
+        $gte: startDate
+          ? dayjs(startDate).format('YYYYMMDDHHmmss')
+          : Util.YearAgo(),
+        $lte: endDate
+          ? dayjs(endDate).format('YYYYMMDDHHmmss')
+          : Util.MonthAfter(),
+      },
     };
     const totalCount = await this.saleModel.countDocuments(filter);
     const hasNext = totalCount > page * length;
