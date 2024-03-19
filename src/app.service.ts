@@ -615,7 +615,7 @@ export class AppService {
   async getVisitClient() {
     const notVisitedOutClient = await this.clientModel
       .find({ lastOutDate: { $exists: true } })
-      .sort({ lastOutDate: -1, _id: 1 })
+      .sort({ lastOutDate: 1, _id: 1 })
       .limit(10);
 
     return notVisitedOutClient;
