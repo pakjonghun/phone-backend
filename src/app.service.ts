@@ -345,12 +345,12 @@ export class AppService {
       },
       {
         $addFields: {
-          accMargin: { $subtract: ['$accInPrice', '$accOutPrice'] },
+          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
           accMarginRate: {
             $multiply: [
               {
                 $divide: [
-                  { $subtract: ['$accInPrice', '$accOutPrice'] },
+                  { $subtract: ['$accOutPrice', '$accInPrice'] },
                   '$accOutPrice',
                 ],
               },
@@ -383,12 +383,12 @@ export class AppService {
       },
       {
         $addFields: {
-          accMargin: { $subtract: ['$accInPrice', '$accOutPrice'] },
+          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
           accMarginRate: {
             $multiply: [
               {
                 $divide: [
-                  { $subtract: ['$accInPrice', '$accOutPrice'] },
+                  { $subtract: ['$accOutPrice', '$accInPrice'] },
                   '$accOutPrice',
                 ],
               },
