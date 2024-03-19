@@ -468,7 +468,7 @@ export class AppService {
           count: { $sum: 1 },
           accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
-          accMargin: { $sum: { $subtract: ['$inPrice', '$outPrice'] } },
+          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
         },
       },
       {
