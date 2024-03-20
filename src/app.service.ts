@@ -521,7 +521,7 @@ export class AppService {
               $subtract: ['$outPrice', '$inPrice'],
             },
           },
-          accPrice: { $sum: '$outPrice' },
+          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
         },
       },
@@ -541,7 +541,7 @@ export class AppService {
           accMarginRate: {
             $multiply: [
               {
-                $divide: ['$accMargin', '$accPrice'],
+                $divide: ['$accMargin', '$accOutPrice'],
               },
               100,
             ],
@@ -576,7 +576,7 @@ export class AppService {
               $subtract: ['$outPrice', '$inPrice'],
             },
           },
-          accPrice: { $sum: '$outPrice' },
+          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
         },
       },
@@ -596,7 +596,7 @@ export class AppService {
           accMarginRate: {
             $multiply: [
               {
-                $divide: ['$accMargin', '$accPrice'],
+                $divide: ['$accMargin', '$accOutPrice'],
               },
               100,
             ],
