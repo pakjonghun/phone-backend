@@ -287,7 +287,6 @@ export class AppService {
   }
 
   async downloadSale(idList: string[]) {
-    console.log(idList);
     const promises = idList.map((item) => {
       const split = item.split('_');
       const imei = split[0];
