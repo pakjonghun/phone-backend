@@ -630,16 +630,43 @@ export class AppService {
       {
         $group: {
           _id: '$outClient',
-          accPrice: { $sum: '$outPrice' },
+          accOutPrice: { $sum: '$outPrice' },
+          accInPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $addFields: {
+          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
+          marginRate: {
+            $round: [
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $subtract: ['$accOutPrice', '$accInPrice'] },
+                      '$accOutPrice',
+                    ],
+                  },
+                  100,
+                ],
+              },
+              2,
+            ],
+          },
         },
       },
     ]);
+    const result = notVisitedOutClient.map((item) => {
+      const targetSale = clientSales.find((jtem) => jtem._id === item._id);
+      const newItem = {
+        ...item,
+        accOutPrice: targetSale.accOutPrice ?? 0,
+        accMargin: targetSale.accMargin ?? 0,
+        marginRate: targetSale.marginRate ?? 0,
+      };
+      return newItem;
+    });
 
-    const result = notVisitedOutClient.map((item) => ({
-      ...item,
-      accPrice:
-        clientSales.find((jtem) => jtem._id === item._id)?.accPrice ?? 0,
-    }));
     return result;
   }
 
