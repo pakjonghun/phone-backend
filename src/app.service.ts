@@ -503,7 +503,7 @@ export class AppService {
   }
 
   getMonthTopClient = async () => {
-    const monthTopClient = await this.saleModel.aggregate([
+    const monthTopClient = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
@@ -557,7 +557,7 @@ export class AppService {
   };
 
   getTodayTopClient = async () => {
-    const todayTopClient = await this.saleModel.aggregate([
+    const todayTopClient = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
@@ -635,12 +635,12 @@ export class AppService {
       },
     ]);
 
-    notVisitedOutClient.map((item) => ({
+    const result = notVisitedOutClient.map((item) => ({
       ...item,
       accPrice:
         clientSales.find((jtem) => jtem._id === item._id)?.accPrice ?? 0,
     }));
-    return notVisitedOutClient;
+    return result;
   }
 
   async reset() {
