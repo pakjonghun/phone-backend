@@ -615,8 +615,31 @@ export class AppService {
     const notVisitedOutClient = await this.clientModel
       .find({ lastOutDate: { $exists: true } })
       .sort({ lastOutDate: 1, _id: 1 })
-      .limit(10);
+      .limit(10)
+      .lean();
 
+    const clientIds = notVisitedOutClient.map((item) => item._id);
+
+    const clientSales = await this.priceSaleModel.aggregate([
+      {
+        $match: {
+          outClient: { $in: clientIds },
+          outDate: { $gt: Util.GetMonthAgo() },
+        },
+      },
+      {
+        $group: {
+          _id: '$outClient',
+          accPrice: { $sum: '$outPrice' },
+        },
+      },
+    ]);
+
+    notVisitedOutClient.map((item) => ({
+      ...item,
+      accPrice:
+        clientSales.find((jtem) => jtem._id === item._id)?.accPrice ?? 0,
+    }));
     return notVisitedOutClient;
   }
 
