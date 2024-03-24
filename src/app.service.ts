@@ -721,7 +721,7 @@ export class AppService {
     );
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async deleteUploadRecord() {
     await this.uploadRecordModel.deleteMany({});
   }
