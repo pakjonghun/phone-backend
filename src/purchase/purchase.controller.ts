@@ -30,7 +30,7 @@ import { PurchaseListDTO } from './dto/purchase.list.dto';
 export class PurchaseController {
   constructor(private readonly purchaseService: PurchaseService) {}
 
-  @Post('purchase/upload')
+  @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage }))
   async uploadSale(
     @UploadedFile(
@@ -47,18 +47,18 @@ export class PurchaseController {
     await this.purchaseService.uploadPurchase(file);
   }
 
-  @Get('/purchase')
+  @Get('')
   async saleList(@Query() query: PurchaseListDTO) {
     const result = await this.purchaseService.purchaseList(query);
     return result;
   }
 
-  @Get('/sale/download')
+  @Get('download')
   async downloadSale(@Query() query: CommonDownloadDTO) {
     return this.purchaseService.download(query.idList);
   }
 
-  @Put('/dashboard/purchase/note/:id')
+  @Put('/dashboard/note/:id')
   async editDashboardNote(
     @Param('id') param: string,
     @Body() body: EditDashboardDTO,
@@ -66,13 +66,13 @@ export class PurchaseController {
     this.purchaseService.editDashboard(param, body);
   }
 
-  @Get('/upload/purchase/record')
+  @Get('/upload/record')
   async uploadRecordList() {
     const result = await this.purchaseService.getUploadRecordList();
     return result;
   }
 
-  @Delete('/upload/purchase/delete')
+  @Delete('/upload/delete')
   async deleteRecordByTime(@Body('uploadId') uploadId: string) {
     await this.purchaseService.deleteRecordByTime(uploadId);
   }
