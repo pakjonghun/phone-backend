@@ -22,6 +22,7 @@ import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { AuthGuard } from './common/guard/auth.guard';
 import { PriceSale, PriceSaleScheme } from './scheme/price.sale.scheme';
 import { UploadRecord, UploadRecordScheme } from './scheme/upload.record';
+import { PurchaseModule } from './purchase/purchase.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UploadRecord, UploadRecordScheme } from './scheme/upload.record';
     ]),
     UserModule,
     ScheduleModule.forRoot(),
+    PurchaseModule,
   ],
   controllers: [AppController],
   providers: [

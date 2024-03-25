@@ -87,40 +87,6 @@ export function IsSortKeyValid(validationOptions?: ValidationOptions) {
   };
 }
 
-type PurchaseSortKey = 'product' | 'isConfirmed' | 'rank' | 'distanceLog';
-
-const purchaseSortKey: Record<Partial<PurchaseSortKey>, number> = {
-  distanceLog: 1,
-  isConfirmed: 1,
-  product: 1,
-  rank: 1,
-};
-
-@ValidatorConstraint({ async: false })
-class IsPurchaseKeyValidConstraint implements ValidatorConstraintInterface {
-  validate(propertyValue: [string, string][]) {
-    return propertyValue.every(([key]) => {
-      return !!purchaseSortKey[key];
-    });
-  }
-
-  defaultMessage() {
-    return '잘못된 정렬 키 입니다.';
-  }
-}
-
-export function IsPurchaseKeyValid(validationOptions?: ValidationOptions) {
-  return function (object: any, propertyName: string) {
-    registerDecorator({
-      target: object.constructor,
-      propertyName: propertyName,
-      options: validationOptions,
-      constraints: [],
-      validator: IsPurchaseKeyValidConstraint,
-    });
-  };
-}
-
 const marginSortKey: Record<string, number> = {
   product: 1,
   inPrice: 1,

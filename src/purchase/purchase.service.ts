@@ -1,42 +1,34 @@
 import { ObjectId } from 'mongodb';
 import * as fs from 'fs';
-
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Sale } from './scheme/sale.scheme';
 import mongoose, { Model } from 'mongoose';
-import { Client } from './scheme/client.scheme';
-import { SaleDownloadMapper, SaleExcelMapper, Rank } from './constant';
-import { Util } from './common/helper/service.helper';
+import { Util } from '../common/helper/service.helper';
 import * as ExcelJS from 'exceljs';
-import { SaleListDTO } from './dto/sale.list.dto';
 import { promisify } from 'util';
 import * as dayjs from 'dayjs';
-import { EditDashboardDTO } from './dto/edit.dashboard.dto';
-import { PriceSale } from './scheme/price.sale.scheme';
-import { UploadRecord } from './scheme/upload.record';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PurchaseService } from './purchase/purchase.service';
+import { EditDashboardDTO } from '../dto/edit.dashboard.dto';
+import { UploadRecord } from '../scheme/upload.record';
+import { Purchase } from 'src/scheme/purchase.scheme';
+import { PurchaseDownloadMapper, PurchaseExcelMapper } from './constant';
+import { PurchaseClient } from 'src/scheme/purchase.client.scheme';
+import { PurchaseListDTO } from './dto/purchase.list.dto';
 
 @Injectable()
-export class AppService {
+export class PurchaseService {
   constructor(
-    private readonly purchseService: PurchaseService,
-    @InjectModel(Sale.name) private saleModel: Model<Sale>,
-    @InjectModel(Client.name) private clientModel: Model<Client>,
-    @InjectModel(PriceSale.name) private priceSaleModel: Model<PriceSale>,
+    @InjectModel(Purchase.name) private purchaseModel: Model<Purchase>,
+    @InjectModel(PurchaseClient.name)
+    private purchaseClientModel: Model<PurchaseClient>,
     @InjectModel(UploadRecord.name)
     private uploadRecordModel: Model<UploadRecord>,
-
-    @Inject('rankReverse')
-    private saleRankReverse: Record<number, Rank>,
-    @Inject('saleExcelMapper') private saleExcelMapper: SaleExcelMapper,
-    @Inject('rank') private rank: Record<Rank, number>,
-    @Inject('saleDownloadMapper')
-    private saleDownloadMapper: SaleDownloadMapper,
+    @Inject('purchaseExcelMapper')
+    private purchaseExcelMapper: PurchaseExcelMapper,
+    @Inject('purchaseDownloadMapper')
+    private purchaseDownloadMapper: PurchaseDownloadMapper,
   ) {}
 
-  async uploadSale(uploadFile: Express.Multer.File) {
+  async uploadPurchase(uploadFile: Express.Multer.File) {
     const recordDoc = new this.uploadRecordModel();
     await recordDoc.save();
 
@@ -44,7 +36,6 @@ export class AppService {
     const clientMap = new Map<string, string>();
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
     const newDocument = [];
-    const newPriceSaleDocument = [];
     let rowCount = 0;
     for await (const sheet of stream) {
       for await (const row of sheet) {
@@ -54,8 +45,7 @@ export class AppService {
           continue;
         }
 
-        const newSale = new this.saleModel();
-        const newPriceSale = new this.priceSaleModel();
+        const newPurchase = new this.purchaseModel();
 
         const columnArray = Array.from(
           { length: row.cellCount },
@@ -64,9 +54,9 @@ export class AppService {
 
         for await (const length of columnArray) {
           const cell = row.getCell(length);
-          const fieldName = this.saleExcelMapper[length] as string;
+          const fieldName = this.purchaseExcelMapper[length] as string;
           if (!fieldName) continue;
-          const target = newSale.schema.path(fieldName)!;
+          const target = newPurchase.schema.path(fieldName)!;
 
           let value =
             typeof cell.value == 'string' ? cell.value.trim() : cell.value;
@@ -90,12 +80,6 @@ export class AppService {
             productSet.add(modelNumber);
           }
 
-          if (fieldName.toLowerCase() === 'outClient') {
-            const stringValue = value as string;
-            if (!clientMap.has(stringValue)) {
-              clientMap.set(stringValue, '');
-            }
-          }
           if (fieldName === 'imei') {
             if (!value) {
               throw new BadRequestException(
@@ -104,12 +88,11 @@ export class AppService {
             }
           }
 
-          newSale[fieldName as string] = value;
+          newPurchase[fieldName as string] = value;
 
-          const isExist = newPriceSale.schema.path(fieldName);
-          if (isExist) newPriceSale[fieldName] = value;
-
-          const isValid = newSale.$isValid(fieldName);
+          const isExist = newPurchase.schema.path(fieldName);
+          if (isExist) newPurchase[fieldName] = value;
+          const isValid = newPurchase.$isValid(fieldName);
 
           if (!isValid) {
             throw new BadRequestException(
@@ -118,26 +101,22 @@ export class AppService {
           }
         }
 
-        newSale.uploadId = recordDoc._id as string;
-        newPriceSale.uploadId = recordDoc._id as string;
-        await newSale.validate();
-        await newPriceSale.validate();
-        const obj = newSale.toObject();
-        const priceObj = newPriceSale.toObject();
+        newPurchase.uploadId = recordDoc._id as string;
+        await newPurchase.validate();
+        const obj = newPurchase.toObject();
         newDocument.push(obj);
-        newPriceSaleDocument.push(priceObj);
 
-        const outDate = newSale.outDate as string;
-        const outClient = newSale.outClient as unknown as string;
-        const existOutDate = clientMap.get(outClient);
-        if (!existOutDate) {
-          clientMap.set(outClient, outDate);
+        const inDate = newPurchase.inDate as string;
+        const inClient = newPurchase.inClient as unknown as string;
+        const existInDate = clientMap.get(inClient);
+        if (!existInDate) {
+          clientMap.set(inClient, inDate);
         }
 
-        if (existOutDate) {
-          const isOutDateLastest = dayjs(outDate).isAfter(dayjs(existOutDate));
-          if (isOutDateLastest) {
-            clientMap.set(outClient, outDate);
+        if (existInDate) {
+          const isInDateLatest = dayjs(inDate).isAfter(dayjs(existInDate));
+          if (isInDateLatest) {
+            clientMap.set(inClient, inDate);
           }
         }
       }
@@ -147,7 +126,7 @@ export class AppService {
       }
 
       const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
-      const existClients = await this.clientModel.find({
+      const existClients = await this.purchaseClientModel.find({
         _id: { $in: clientIds },
       });
 
@@ -167,7 +146,7 @@ export class AppService {
 
       const insertClientList = Array.from(notExistClientList).map(
         ([_id, lastOutDate]) =>
-          new this.clientModel({
+          new this.purchaseClientModel({
             _id,
             lastOutDate,
             uploadId: recordDoc._id as mongoose.Types.ObjectId,
@@ -175,16 +154,16 @@ export class AppService {
           }),
       );
 
-      await this.clientModel.insertMany(insertClientList);
-      await this.clientModel.bulkWrite(
-        Array.from(existClientList).map(([clientId, lastOutDate]) => ({
+      await this.purchaseClientModel.insertMany(insertClientList);
+      await this.purchaseClientModel.bulkWrite(
+        Array.from(existClientList).map(([clientId, lastInDate]) => ({
           updateOne: {
-            filter: { _id: clientId, lastOutDate: { $lt: lastOutDate } },
+            filter: { _id: clientId, lastInDate: { $lt: lastInDate } },
             update: [
               {
                 $set: {
                   backupLastOutDate: {
-                    $concatArrays: ['$backupLastOutDate', ['$lastOutDate']],
+                    $concatArrays: ['$backupLastInDate', ['$lastInDate']],
                   },
                 },
               },
@@ -198,7 +177,7 @@ export class AppService {
               {
                 $set: {
                   uploadId: recordDoc._id as mongoose.Types.ObjectId,
-                  lastOutDate,
+                  lastInDate,
                 },
               },
             ],
@@ -214,7 +193,7 @@ export class AppService {
         );
       }
 
-      const duplicatedItems = await this.saleModel.find({
+      const duplicatedItems = await this.purchaseModel.find({
         imei: { $in: imeis },
         createdAt: {
           $gt: dayjs().startOf('day'),
@@ -228,14 +207,8 @@ export class AppService {
         );
       }
 
-      await this.saleModel.bulkWrite(
+      await this.purchaseModel.bulkWrite(
         newDocument.map((document) => ({
-          insertOne: { document },
-        })),
-      );
-
-      await this.priceSaleModel.bulkWrite(
-        newPriceSaleDocument.map((document) => ({
           insertOne: { document },
         })),
       );
@@ -246,14 +219,14 @@ export class AppService {
     await this.unlinkExcelFile(uploadFile.path);
   }
 
-  async saleList({
+  async purchaseList({
     keyword = '',
     length,
     page,
     sort = [['updatedAt', -1]],
     startDate,
     endDate,
-  }: SaleListDTO) {
+  }: PurchaseListDTO) {
     const filter = {
       product: {
         $regex: keyword,
@@ -268,14 +241,14 @@ export class AppService {
           : Util.MonthAfter(),
       },
     };
-    const totalCount = await this.saleModel.countDocuments(filter);
+    const totalCount = await this.purchaseModel.countDocuments(filter);
     const hasNext = totalCount > page * length;
     const parseSort = sort.map(([sortKey, sortValue]) => [
       sortKey,
       Number(sortValue),
     ]);
     const sortObj = Object.fromEntries(parseSort);
-    const data = await this.saleModel
+    const data = await this.purchaseModel
       .find(filter)
       .sort({ ...sortObj, _id: 1 })
       .skip((page - 1) * length)
@@ -288,12 +261,12 @@ export class AppService {
     };
   }
 
-  async downloadSale(idList: string[]) {
+  async download(idList: string[]) {
     const promises = idList.map((item) => {
       const split = item.split('_');
       const imei = split[0];
-      const outDate = split[1];
-      return this.saleModel.findOne({ imei, outDate });
+      const inDate = split[1];
+      return this.purchaseModel.findOne({ imei, inDate });
     });
 
     const stream = await Promise.all(promises);
@@ -302,21 +275,16 @@ export class AppService {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
 
-    worksheet.columns = this.saleDownloadMapper;
+    worksheet.columns = this.purchaseDownloadMapper;
 
     for await (const doc of stream) {
       const newDoc = {
         inDate: doc.inDate,
         inClient: doc.inClient,
-        outDate: doc.outDate,
-        outClient: doc.outClient,
         product: doc.product,
         _id: doc._id,
         imei: doc.imei,
         inPrice: doc.inPrice,
-        outPrice: doc.outPrice,
-        margin: doc.margin,
-        marginRate: doc.marginRate,
         note: doc.note,
       };
 
@@ -327,8 +295,8 @@ export class AppService {
     return buffer;
   }
 
-  async getMonthSale() {
-    const monthSale = await this.priceSaleModel.aggregate([
+  async getMonthPurchase() {
+    const monthSale = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -340,24 +308,7 @@ export class AppService {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $addFields: {
-          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: [
-                  { $subtract: ['$accOutPrice', '$accInPrice'] },
-                  '$accOutPrice',
-                ],
-              },
-              100,
-            ],
-          },
         },
       },
     ]);
@@ -365,8 +316,8 @@ export class AppService {
     return monthSale[0];
   }
 
-  async getTodaySale() {
-    const todaySale = await this.priceSaleModel.aggregate([
+  async getTodayPurchase() {
+    const todaySale = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -378,24 +329,7 @@ export class AppService {
         $group: {
           _id: null,
           count: { $sum: 1 },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $addFields: {
-          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: [
-                  { $subtract: ['$accOutPrice', '$accInPrice'] },
-                  '$accOutPrice',
-                ],
-              },
-              100,
-            ],
-          },
         },
       },
     ]);
@@ -404,7 +338,7 @@ export class AppService {
   }
 
   async getMonthTopProduct() {
-    const monthTopProduct = await this.priceSaleModel.aggregate([
+    const monthTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -416,14 +350,12 @@ export class AppService {
         $group: {
           _id: '$product',
           count: { $sum: 1 },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
-          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
         },
       },
       {
         $sort: {
-          accOutPrice: -1,
+          accInPrice: -1,
           count: -1,
         },
       },
@@ -433,14 +365,6 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: ['$accMargin', '$accOutPrice'],
-              },
-              100,
-            ],
-          },
         },
       },
       {
@@ -454,7 +378,7 @@ export class AppService {
   }
 
   async getTodayTopProduct() {
-    const todayTopProduct = await this.priceSaleModel.aggregate([
+    const todayTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -467,14 +391,12 @@ export class AppService {
         $group: {
           _id: '$product',
           count: { $sum: 1 },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
-          accMargin: { $sum: { $subtract: ['$outPrice', '$inPrice'] } },
         },
       },
       {
         $sort: {
-          accOutPrice: -1,
+          accInPrice: -1,
           count: -1,
         },
       },
@@ -484,14 +406,6 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: ['$accMargin', '$accOutPrice'],
-              },
-              100,
-            ],
-          },
         },
       },
       {
@@ -505,7 +419,7 @@ export class AppService {
   }
 
   getMonthTopClient = async () => {
-    const monthTopClient = await this.priceSaleModel.aggregate([
+    const monthTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -515,20 +429,14 @@ export class AppService {
       },
       {
         $group: {
-          _id: '$outClient',
+          _id: '$inClient',
           count: { $sum: 1 },
-          accMargin: {
-            $sum: {
-              $subtract: ['$outPrice', '$inPrice'],
-            },
-          },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
-          accOutPrice: -1,
+          accPrice: -1,
           count: -1,
         },
       },
@@ -539,14 +447,6 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: ['$accMargin', '$accOutPrice'],
-              },
-              100,
-            ],
-          },
         },
       },
       {
@@ -559,7 +459,7 @@ export class AppService {
   };
 
   getTodayTopClient = async () => {
-    const todayTopClient = await this.priceSaleModel.aggregate([
+    const todayTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
           outDate: {
@@ -570,20 +470,14 @@ export class AppService {
       },
       {
         $group: {
-          _id: '$outClient',
+          _id: '$inClient',
           count: { $sum: 1 },
-          accMargin: {
-            $sum: {
-              $subtract: ['$outPrice', '$inPrice'],
-            },
-          },
-          accOutPrice: { $sum: '$outPrice' },
           accInPrice: { $sum: '$inPrice' },
         },
       },
       {
         $sort: {
-          accOutPrice: -1,
+          accInPrice: -1,
           count: -1,
         },
       },
@@ -594,14 +488,6 @@ export class AppService {
       {
         $addFields: {
           name: '$_id',
-          accMarginRate: {
-            $multiply: [
-              {
-                $divide: ['$accMargin', '$accOutPrice'],
-              },
-              100,
-            ],
-          },
         },
       },
       {
@@ -614,15 +500,15 @@ export class AppService {
   };
 
   async getVisitClient() {
-    const notVisitedOutClient = await this.clientModel
-      .find({ lastOutDate: { $exists: true } })
-      .sort({ lastOutDate: 1, _id: 1 })
+    const notVisitedOutClient = await this.purchaseClientModel
+      .find({ lastInDate: { $exists: true } })
+      .sort({ lastInDate: 1, _id: 1 })
       .limit(10)
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
 
-    const clientSales = await this.priceSaleModel.aggregate([
+    const clientSales = await this.purchaseModel.aggregate([
       {
         $match: {
           outClient: { $in: clientIds },
@@ -631,30 +517,8 @@ export class AppService {
       },
       {
         $group: {
-          _id: '$outClient',
-          accOutPrice: { $sum: '$outPrice' },
+          _id: '$inClient',
           accInPrice: { $sum: '$inPrice' },
-        },
-      },
-      {
-        $addFields: {
-          accMargin: { $subtract: ['$accOutPrice', '$accInPrice'] },
-          marginRate: {
-            $round: [
-              {
-                $multiply: [
-                  {
-                    $divide: [
-                      { $subtract: ['$accOutPrice', '$accInPrice'] },
-                      '$accOutPrice',
-                    ],
-                  },
-                  100,
-                ],
-              },
-              2,
-            ],
-          },
         },
       },
     ]);
@@ -674,10 +538,8 @@ export class AppService {
 
   async reset() {
     await this.uploadRecordModel.deleteMany();
-    await this.priceSaleModel.deleteMany();
-    await this.saleModel.deleteMany();
-    await this.clientModel.deleteMany();
-    await this.purchseService.reset();
+    await this.purchaseClientModel.deleteMany();
+    await this.purchaseModel.deleteMany();
   }
 
   async getUploadRecordList() {
@@ -685,7 +547,7 @@ export class AppService {
   }
 
   async editDashboard(id: string, { note }: EditDashboardDTO) {
-    const result = await this.clientModel.updateOne(
+    const result = await this.purchaseClientModel.updateOne(
       { _id: id },
       { $set: { note } },
     );
@@ -700,26 +562,23 @@ export class AppService {
       _id: uploadId,
     });
 
-    await this.saleModel.deleteMany({
-      uploadId,
-    });
-    await this.priceSaleModel.deleteMany({
+    await this.purchaseModel.deleteMany({
       uploadId,
     });
 
-    await this.clientModel.deleteMany({
+    await this.purchaseClientModel.deleteMany({
       uploadId: new ObjectId(uploadId),
-      backupLastOutDate: { $size: 0 },
+      backupLastInDate: { $size: 0 },
     });
 
-    await this.clientModel.updateMany(
+    await this.purchaseClientModel.updateMany(
       {
         uploadId: new ObjectId(uploadId),
       },
       [
         {
           $set: {
-            lastOutDate: { $arrayElemAt: ['$backupLastOutDate', -1] }, // 배열의 마지막 요소
+            lastOutDate: { $arrayElemAt: ['$backupLastInDate', -1] }, // 배열의 마지막 요소
           },
         },
         {
@@ -729,10 +588,10 @@ export class AppService {
         },
         {
           $set: {
-            backupLastOutDate: {
+            backupLastInDate: {
               $slice: [
-                '$backupLastOutDate',
-                { $subtract: [{ $size: '$backupLastOutDate' }, 1] },
+                '$backupLastInDate',
+                { $subtract: [{ $size: '$backupLastInDate' }, 1] },
               ],
             },
           },
@@ -749,16 +608,6 @@ export class AppService {
         },
       ],
     );
-  }
-
-  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
-  async deleteUploadRecord() {
-    await this.uploadRecordModel.deleteMany({});
-  }
-
-  @Cron('0 0 * * 0')
-  async deleteSale() {
-    await this.saleModel.deleteMany({});
   }
 
   private async unlinkExcelFile(filePath: string) {

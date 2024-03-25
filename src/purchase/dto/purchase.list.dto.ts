@@ -8,17 +8,15 @@ import {
   Min,
 } from 'class-validator';
 import { Order } from 'src/common/type';
-import {
-  IsOrderValid,
-  IsSortKeyValid,
-} from 'src/common/validation/order.validation';
+import { IsOrderValid } from 'src/common/validation/order.validation';
+import { isPurchaseKeyValid } from '../validation/isKeyof.validation';
 
-export class SaleListDTO {
+export class PurchaseListDTO {
   @IsOptional()
   @IsArray()
   @IsArray({ each: true })
   @IsOrderValid()
-  @IsSortKeyValid()
+  @isPurchaseKeyValid()
   sort: [string, Order][];
 
   @IsOptional()
