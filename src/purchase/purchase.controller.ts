@@ -32,7 +32,7 @@ export class PurchaseController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage }))
-  async uploadSale(
+  async uploadPurchase(
     @UploadedFile(
       new ParseFilePipe({
         errorHttpStatusCode: 400,
@@ -48,13 +48,13 @@ export class PurchaseController {
   }
 
   @Get('')
-  async saleList(@Query() query: PurchaseListDTO) {
+  async purchaseList(@Query() query: PurchaseListDTO) {
     const result = await this.purchaseService.purchaseList(query);
     return result;
   }
 
   @Get('download')
-  async downloadSale(@Query() query: CommonDownloadDTO) {
+  async downloadPurchase(@Query() query: CommonDownloadDTO) {
     return this.purchaseService.download(query.idList);
   }
 

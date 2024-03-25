@@ -232,7 +232,7 @@ export class PurchaseService {
         $regex: keyword,
         $options: 'i',
       },
-      outDate: {
+      inDate: {
         $gte: startDate
           ? dayjs(startDate).format('YYYYMMDDHHmmss')
           : Util.YearAgo(),
