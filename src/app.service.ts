@@ -526,7 +526,7 @@ export class AppService {
       },
       {
         $sort: {
-          accPrice: -1,
+          accOutPrice: -1,
           count: -1,
         },
       },
@@ -581,7 +581,7 @@ export class AppService {
       },
       {
         $sort: {
-          accPrice: -1,
+          accOutPrice: -1,
           count: -1,
         },
       },
