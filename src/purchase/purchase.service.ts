@@ -124,7 +124,7 @@ export class PurchaseService {
       if (newDocument.length === 0) {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
       }
-
+      console.log('client map', clientMap);
       const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
       const existClients = await this.purchaseClientModel.find({
         _id: { $in: clientIds },
@@ -145,10 +145,10 @@ export class PurchaseService {
       });
 
       const insertClientList = Array.from(notExistClientList).map(
-        ([_id, lastOutDate]) =>
+        ([_id, lastInDate]) =>
           new this.purchaseClientModel({
             _id,
-            lastOutDate,
+            lastInDate,
             uploadId: recordDoc._id as mongoose.Types.ObjectId,
             backupLastOutDate: [],
           }),
@@ -195,7 +195,7 @@ export class PurchaseService {
 
       const duplicatedItems = await this.purchaseModel.find({
         imei: { $in: imeis },
-        createdAt: {
+        inDate: {
           $gt: dayjs().startOf('day'),
           $lt: dayjs().endOf('day'),
         },
