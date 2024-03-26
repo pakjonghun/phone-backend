@@ -299,7 +299,7 @@ export class PurchaseService {
     const monthSale = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetMonthAgo(),
           },
         },
@@ -320,7 +320,7 @@ export class PurchaseService {
     const todaySale = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetToday(),
           },
         },
@@ -341,7 +341,7 @@ export class PurchaseService {
     const monthTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetMonthAgo(),
           },
         },
@@ -381,7 +381,7 @@ export class PurchaseService {
     const todayTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetToday(),
             $lte: Util.GetTodayEnd(),
           },
@@ -422,7 +422,7 @@ export class PurchaseService {
     const monthTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetMonthAgo(),
           },
         },
@@ -436,7 +436,7 @@ export class PurchaseService {
       },
       {
         $sort: {
-          accPrice: -1,
+          accInPrice: -1,
           count: -1,
         },
       },
@@ -462,7 +462,7 @@ export class PurchaseService {
     const todayTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
-          outDate: {
+          inDate: {
             $gte: Util.GetToday(),
             $lte: Util.GetTodayEnd(),
           },
@@ -508,11 +508,11 @@ export class PurchaseService {
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
 
-    const clientSales = await this.purchaseModel.aggregate([
+    const clientPurchase = await this.purchaseModel.aggregate([
       {
         $match: {
-          outClient: { $in: clientIds },
-          outDate: { $gt: Util.GetMonthAgo() },
+          inClient: { $in: clientIds },
+          inDate: { $gt: Util.GetMonthAgo() },
         },
       },
       {
@@ -523,12 +523,10 @@ export class PurchaseService {
       },
     ]);
     const result = notVisitedOutClient.map((item) => {
-      const targetSale = clientSales.find((jtem) => jtem._id === item._id);
+      const targetSale = clientPurchase.find((jtem) => jtem._id === item._id);
       const newItem = {
         ...item,
-        accOutPrice: targetSale.accOutPrice ?? 0,
-        accMargin: targetSale.accMargin ?? 0,
-        marginRate: targetSale.marginRate ?? 0,
+        accInPrice: targetSale.accOutPrice ?? 0,
       };
       return newItem;
     });
@@ -578,7 +576,7 @@ export class PurchaseService {
       [
         {
           $set: {
-            lastOutDate: { $arrayElemAt: ['$backupLastInDate', -1] }, // 배열의 마지막 요소
+            lastInDate: { $arrayElemAt: ['$backupLastInDate', -1] }, // 배열의 마지막 요소
           },
         },
         {

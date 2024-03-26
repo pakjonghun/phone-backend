@@ -58,14 +58,6 @@ export class PurchaseController {
     return this.purchaseService.download(query.idList);
   }
 
-  @Put('/dashboard/note/:id')
-  async editDashboardNote(
-    @Param('id') param: string,
-    @Body() body: EditDashboardDTO,
-  ) {
-    this.purchaseService.editDashboard(param, body);
-  }
-
   @Get('/upload/record')
   async uploadRecordList() {
     const result = await this.purchaseService.getUploadRecordList();
@@ -75,5 +67,54 @@ export class PurchaseController {
   @Delete('/upload/delete')
   async deleteRecordByTime(@Body('uploadId') uploadId: string) {
     await this.purchaseService.deleteRecordByTime(uploadId);
+  }
+
+  @Put('/dashboard/note/:id')
+  async editDashboardNote(
+    @Param('id') param: string,
+    @Body() body: EditDashboardDTO,
+  ) {
+    this.purchaseService.editDashboard(param, body);
+  }
+
+  @Get('/dashboard/month-purchase')
+  async getMonthPurchase() {
+    const result = await this.purchaseService.getMonthPurchase();
+    return result;
+  }
+
+  @Get('/dashboard/today-purchase')
+  async getTodayPurchase() {
+    const result = await this.purchaseService.getTodayPurchase();
+    return result;
+  }
+
+  @Get('/dashboard/month-product')
+  async getMonthTopProduct() {
+    const result = await this.purchaseService.getMonthTopProduct();
+    return result;
+  }
+  @Get('/dashboard/today-product')
+  async getTodayTopProduct() {
+    const result = await this.purchaseService.getTodayTopProduct();
+    return result;
+  }
+
+  @Get('/dashboard/month-client')
+  async getMonthTopClient() {
+    const result = await this.purchaseService.getMonthTopClient();
+    return result;
+  }
+
+  @Get('/dashboard/today-client')
+  async getTodayTopClient() {
+    const result = await this.purchaseService.getTodayTopClient();
+    return result;
+  }
+
+  @Get('/dashboard/visit-client')
+  async getVisitClient() {
+    const result = await this.purchaseService.getVisitClient();
+    return result;
   }
 }
