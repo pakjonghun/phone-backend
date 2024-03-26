@@ -519,6 +519,7 @@ export class PurchaseService {
         $group: {
           _id: '$inClient',
           accInPrice: { $sum: '$inPrice' },
+          count: { $sum: 1 },
         },
       },
     ]);
@@ -526,7 +527,8 @@ export class PurchaseService {
       const targetSale = clientPurchase.find((jtem) => jtem._id === item._id);
       const newItem = {
         ...item,
-        accInPrice: targetSale.accOutPrice ?? 0,
+        accInPrice: targetSale.accInPrice ?? 0,
+        count: targetSale.count ?? 0,
       };
       return newItem;
     });
