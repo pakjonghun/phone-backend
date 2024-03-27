@@ -2,7 +2,12 @@ import { ObjectId } from 'mongodb';
 import * as fs from 'fs';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, {
+  FilterQuery,
+  Model,
+  PipelineStage,
+  UpdateQuery,
+} from 'mongoose';
 import { Util } from '../common/helper/service.helper';
 import * as ExcelJS from 'exceljs';
 import { promisify } from 'util';
@@ -14,6 +19,8 @@ import { PurchaseClient } from 'src/scheme/purchase.client.scheme';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { UploadPurchaseRecord } from 'src/scheme/upload.purchase.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Client } from 'src/scheme/client.scheme';
+import { ClientListDTO } from 'src/dto/client.list.dto';
 
 @Injectable()
 export class PurchaseService {
@@ -608,6 +615,84 @@ export class PurchaseService {
         },
       ],
     );
+  }
+
+  async editPurchaseClient(
+    filterQuery: FilterQuery<Client>,
+    updateQuery: UpdateQuery<Client>,
+  ) {
+    const updateResult = await this.purchaseClientModel
+      .findOneAndUpdate(filterQuery, updateQuery, { new: true })
+      .lean<Client>();
+
+    if (!updateResult) {
+      throw new BadRequestException('업데이트 할 대상이 존재하지 않습니다.');
+    }
+  }
+
+  async purchaseClientList({ keyword, length, page }: ClientListDTO) {
+    const clientList = await this.purchaseClientModel
+      .find({
+        _id: { $regex: keyword ?? '', $options: 'i' },
+      })
+      .skip((page - 1) * length)
+      .limit(length)
+      .lean<Client[]>();
+
+    const clientIds = clientList.map((item) => item._id);
+
+    const pipeLine: PipelineStage[] = [
+      { $match: { inClient: { $in: clientIds } } },
+      {
+        $group: {
+          _id: { inClient: '$inClient', product: '$product' },
+          accInPrice: { $sum: '$inPrice' },
+        },
+      },
+      {
+        $group: {
+          _id: '$_id.inClient',
+          products: {
+            $push: {
+              product: '$_id.product',
+              accInPrice: '$accInPrice',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          products: [
+            {
+              $slice: [
+                {
+                  $sortArray: {
+                    input: '$products',
+                    sortBy: { accInPrice: -1 },
+                  },
+                },
+                10,
+              ],
+            },
+          ],
+        },
+      },
+    ];
+
+    const topTenSaleList = await this.purchaseModel.aggregate<{
+      _id: string;
+      products: { product: string; accInPrice: number };
+    }>(pipeLine);
+
+    const result = clientList.map((item) => {
+      const targetSale = topTenSaleList.find((sale) => sale._id === item._id);
+      if (!targetSale) return item;
+
+      return { ...item, products: targetSale.products };
+    });
+
+    return result;
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)

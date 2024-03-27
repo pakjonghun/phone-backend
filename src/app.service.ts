@@ -4,7 +4,12 @@ import * as fs from 'fs';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sale } from './scheme/sale.scheme';
-import mongoose, { Model } from 'mongoose';
+import mongoose, {
+  FilterQuery,
+  Model,
+  PipelineStage,
+  UpdateQuery,
+} from 'mongoose';
 import { Client } from './scheme/client.scheme';
 import { SaleDownloadMapper, SaleExcelMapper, Rank } from './constant';
 import { Util } from './common/helper/service.helper';
@@ -17,6 +22,7 @@ import { PriceSale } from './scheme/price.sale.scheme';
 import { UploadRecord } from './scheme/upload.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
+import { ClientListDTO } from './dto/client.list.dto';
 
 @Injectable()
 export class AppService {
@@ -749,6 +755,84 @@ export class AppService {
         },
       ],
     );
+  }
+
+  async editSaleClient(
+    filterQuery: FilterQuery<Client>,
+    updateQuery: UpdateQuery<Client>,
+  ) {
+    const updateResult = await this.clientModel
+      .findOneAndUpdate(filterQuery, updateQuery, { new: true })
+      .lean<Client>();
+
+    if (!updateResult) {
+      throw new BadRequestException('업데이트 할 대상이 존재하지 않습니다.');
+    }
+  }
+
+  async saleClientList({ keyword, length, page }: ClientListDTO) {
+    const clientList = await this.clientModel
+      .find({
+        _id: { $regex: keyword ?? '', $options: 'i' },
+      })
+      .skip((page - 1) * length)
+      .limit(length)
+      .lean<Client[]>();
+
+    const clientIds = clientList.map((item) => item._id);
+
+    const pipeLine: PipelineStage[] = [
+      { $match: { outClient: { $in: clientIds } } },
+      {
+        $group: {
+          _id: { outClient: '$outClient', product: '$product' },
+          accOutPrice: { $sum: '$outPrice' },
+        },
+      },
+      {
+        $group: {
+          _id: '$_id.outClient',
+          products: {
+            $push: {
+              product: '$_id.product',
+              accOutPrice: '$accOutPrice',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          products: [
+            {
+              $slice: [
+                {
+                  $sortArray: {
+                    input: '$products',
+                    sortBy: { accOutPrice: -1 },
+                  },
+                },
+                10,
+              ],
+            },
+          ],
+        },
+      },
+    ];
+
+    const topTenSaleList = await this.saleModel.aggregate<{
+      _id: string;
+      products: { product: string; accOutPrice: number };
+    }>(pipeLine);
+
+    const result = clientList.map((item) => {
+      const targetSale = topTenSaleList.find((sale) => sale._id === item._id);
+      if (!targetSale) return item;
+
+      return { ...item, products: targetSale.products };
+    });
+
+    return result;
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
