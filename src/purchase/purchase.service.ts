@@ -8,11 +8,12 @@ import * as ExcelJS from 'exceljs';
 import { promisify } from 'util';
 import * as dayjs from 'dayjs';
 import { EditDashboardDTO } from '../dto/edit.dashboard.dto';
-import { UploadRecord } from '../scheme/upload.record';
 import { Purchase } from 'src/scheme/purchase.scheme';
 import { PurchaseDownloadMapper, PurchaseExcelMapper } from './constant';
 import { PurchaseClient } from 'src/scheme/purchase.client.scheme';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
+import { UploadPurchaseRecord } from 'src/scheme/upload.purchase.record';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class PurchaseService {
@@ -20,8 +21,8 @@ export class PurchaseService {
     @InjectModel(Purchase.name) private purchaseModel: Model<Purchase>,
     @InjectModel(PurchaseClient.name)
     private purchaseClientModel: Model<PurchaseClient>,
-    @InjectModel(UploadRecord.name)
-    private uploadRecordModel: Model<UploadRecord>,
+    @InjectModel(UploadPurchaseRecord.name)
+    private uploadPurchaseRecordModel: Model<UploadPurchaseRecord>,
     @Inject('purchaseExcelMapper')
     private purchaseExcelMapper: PurchaseExcelMapper,
     @Inject('purchaseDownloadMapper')
@@ -29,7 +30,7 @@ export class PurchaseService {
   ) {}
 
   async uploadPurchase(uploadFile: Express.Multer.File) {
-    const recordDoc = new this.uploadRecordModel();
+    const recordDoc = new this.uploadPurchaseRecordModel();
     await recordDoc.save();
 
     const productSet = new Set<string>();
@@ -124,7 +125,6 @@ export class PurchaseService {
       if (newDocument.length === 0) {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
       }
-      console.log('client map', clientMap);
       const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
       const existClients = await this.purchaseClientModel.find({
         _id: { $in: clientIds },
@@ -527,8 +527,8 @@ export class PurchaseService {
       const targetSale = clientPurchase.find((jtem) => jtem._id === item._id);
       const newItem = {
         ...item,
-        accInPrice: targetSale.accInPrice ?? 0,
-        count: targetSale.count ?? 0,
+        accInPrice: targetSale?.accInPrice ?? 0,
+        count: targetSale?.count ?? 0,
       };
       return newItem;
     });
@@ -537,13 +537,13 @@ export class PurchaseService {
   }
 
   async reset() {
-    await this.uploadRecordModel.deleteMany();
+    await this.uploadPurchaseRecordModel.deleteMany();
     await this.purchaseClientModel.deleteMany();
     await this.purchaseModel.deleteMany();
   }
 
   async getUploadRecordList() {
-    return this.uploadRecordModel.find({});
+    return this.uploadPurchaseRecordModel.find({});
   }
 
   async editDashboard(id: string, { note }: EditDashboardDTO) {
@@ -558,7 +558,7 @@ export class PurchaseService {
   }
 
   async deleteRecordByTime(uploadId: string) {
-    await this.uploadRecordModel.deleteOne({
+    await this.uploadPurchaseRecordModel.deleteOne({
       _id: uploadId,
     });
 
@@ -608,6 +608,11 @@ export class PurchaseService {
         },
       ],
     );
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async deleteUploadRecord() {
+    await this.uploadPurchaseRecordModel.deleteMany({});
   }
 
   private async unlinkExcelFile(filePath: string) {

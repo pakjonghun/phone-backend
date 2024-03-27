@@ -8,7 +8,10 @@ import {
   PurchaseClient,
   PurchaseClientScheme,
 } from 'src/scheme/purchase.client.scheme';
-import { UploadRecord, UploadRecordScheme } from 'src/scheme/upload.record';
+import {
+  UploadPurchaseRecord,
+  UploadPurchaseRecordScheme,
+} from 'src/scheme/upload.purchase.record';
 
 @Module({
   exports: [PurchaseService],
@@ -16,7 +19,7 @@ import { UploadRecord, UploadRecordScheme } from 'src/scheme/upload.record';
     MongooseModule.forFeature([
       { name: Purchase.name, schema: PurchaseScheme },
       { name: PurchaseClient.name, schema: PurchaseClientScheme },
-      { name: UploadRecord.name, schema: UploadRecordScheme },
+      { name: UploadPurchaseRecord.name, schema: UploadPurchaseRecordScheme },
     ]),
   ],
   providers: [

@@ -216,7 +216,7 @@ export class AppService {
 
       const duplicatedItems = await this.saleModel.find({
         imei: { $in: imeis },
-        createdAt: {
+        outDate: {
           $gt: dayjs().startOf('day'),
           $lt: dayjs().endOf('day'),
         },
@@ -662,9 +662,9 @@ export class AppService {
       const targetSale = clientSales.find((jtem) => jtem._id === item._id);
       const newItem = {
         ...item,
-        accOutPrice: targetSale.accOutPrice ?? 0,
-        accMargin: targetSale.accMargin ?? 0,
-        marginRate: targetSale.marginRate ?? 0,
+        accOutPrice: targetSale?.accOutPrice ?? 0,
+        accMargin: targetSale?.accMargin ?? 0,
+        marginRate: targetSale?.marginRate ?? 0,
       };
       return newItem;
     });
@@ -751,12 +751,12 @@ export class AppService {
     );
   }
 
-  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async deleteUploadRecord() {
     await this.uploadRecordModel.deleteMany({});
   }
 
-  @Cron('0 0 * * 0')
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async deleteSale() {
     await this.saleModel.deleteMany({});
   }
