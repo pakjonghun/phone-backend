@@ -38,7 +38,7 @@ export class UserController {
   }
 
   @SetLog('회원가입')
-  @AuthType(AUTH_TYPE.ADMIN)
+  // @AuthType(AUTH_TYPE.ADMIN)
   @Post('signup/:id')
   async signup(@Body() user: SignupDTO) {
     await this.userService.signup(user);
