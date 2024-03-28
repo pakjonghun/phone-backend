@@ -120,13 +120,13 @@ export class PurchaseController {
     return result;
   }
 
-  @Put('')
-  async editSaleClient({ id, ...body }: EditClientDTO) {
+  @Put('/client')
+  async editPurchaseClient(@Body() { id, ...body }: EditClientDTO) {
     await this.purchaseService.editPurchaseClient({ _id: id }, body);
   }
 
   @Get('/client')
-  async saleClientList(@Query() query: ClientListDTO) {
+  async purchaseClientList(@Query() query: ClientListDTO) {
     const result = await this.purchaseService.purchaseClientList(query);
     return result;
   }

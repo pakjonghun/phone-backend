@@ -761,7 +761,6 @@ export class AppService {
     filterQuery: FilterQuery<Client>,
     updateQuery: UpdateQuery<Client>,
   ) {
-    console.log(filterQuery);
     const updateResult = await this.clientModel
       .findOneAndUpdate(filterQuery, updateQuery, { new: true })
       .lean<Client>();

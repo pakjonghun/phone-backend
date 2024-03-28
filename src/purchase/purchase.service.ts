@@ -631,10 +631,13 @@ export class PurchaseService {
   }
 
   async purchaseClientList({ keyword, length, page }: ClientListDTO) {
+    const filter = {
+      _id: { $regex: keyword ?? '', $options: 'i' },
+    };
+
+    const totalCount = await this.purchaseClientModel.countDocuments(filter);
     const clientList = await this.purchaseClientModel
-      .find({
-        _id: { $regex: keyword ?? '', $options: 'i' },
-      })
+      .find(filter)
       .skip((page - 1) * length)
       .limit(length)
       .lean<Client[]>();
@@ -663,19 +666,17 @@ export class PurchaseService {
       {
         $project: {
           _id: 1,
-          products: [
-            {
-              $slice: [
-                {
-                  $sortArray: {
-                    input: '$products',
-                    sortBy: { accInPrice: -1 },
-                  },
+          products: {
+            $slice: [
+              {
+                $sortArray: {
+                  input: '$products',
+                  sortBy: { accInPrice: -1 },
                 },
-                10,
-              ],
-            },
-          ],
+              },
+              10,
+            ],
+          },
         },
       },
     ];
@@ -692,7 +693,11 @@ export class PurchaseService {
       return { ...item, products: targetSale.products };
     });
 
-    return result;
+    return {
+      data: result,
+      totalCount,
+      hasNext: length * page < totalCount,
+    };
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
