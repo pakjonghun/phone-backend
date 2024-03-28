@@ -761,6 +761,7 @@ export class AppService {
     filterQuery: FilterQuery<Client>,
     updateQuery: UpdateQuery<Client>,
   ) {
+    console.log(filterQuery);
     const updateResult = await this.clientModel
       .findOneAndUpdate(filterQuery, updateQuery, { new: true })
       .lean<Client>();
@@ -771,10 +772,13 @@ export class AppService {
   }
 
   async saleClientList({ keyword, length, page }: ClientListDTO) {
+    const filter = {
+      _id: { $regex: keyword ?? '', $options: 'i' },
+    };
+
+    const totalCount = await this.clientModel.countDocuments(filter);
     const clientList = await this.clientModel
-      .find({
-        _id: { $regex: keyword ?? '', $options: 'i' },
-      })
+      .find(filter)
       .skip((page - 1) * length)
       .limit(length)
       .lean<Client[]>();
@@ -803,19 +807,17 @@ export class AppService {
       {
         $project: {
           _id: 1,
-          products: [
-            {
-              $slice: [
-                {
-                  $sortArray: {
-                    input: '$products',
-                    sortBy: { accOutPrice: -1 },
-                  },
+          products: {
+            $slice: [
+              {
+                $sortArray: {
+                  input: '$products',
+                  sortBy: { accOutPrice: -1 },
                 },
-                10,
-              ],
-            },
-          ],
+              },
+              10,
+            ],
+          },
         },
       },
     ];
@@ -832,7 +834,11 @@ export class AppService {
       return { ...item, products: targetSale.products };
     });
 
-    return result;
+    return {
+      data: result,
+      totalCount,
+      hasNext: length * page < totalCount,
+    };
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)

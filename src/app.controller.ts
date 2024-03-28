@@ -126,7 +126,8 @@ export class AppController {
   }
 
   @Put('/sale-client')
-  async editSaleClient({ id, ...body }: EditClientDTO) {
+  async editSaleClient(@Body() { id, ...body }: EditClientDTO) {
+    console.log(id);
     await this.appService.editSaleClient({ _id: id }, body);
   }
 
