@@ -25,6 +25,8 @@ import { PurchaseService } from './purchase.service';
 import { CommonDownloadDTO } from 'src/dto/download.sale.dto';
 import { EditDashboardDTO } from 'src/dto/edit.dashboard.dto';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
+import { EditClientDTO } from 'src/dto/edit.client.dto';
+import { ClientListDTO } from 'src/dto/client.list.dto';
 
 @Controller('purchase')
 export class PurchaseController {
@@ -115,6 +117,17 @@ export class PurchaseController {
   @Get('/dashboard/visit-client')
   async getVisitClient() {
     const result = await this.purchaseService.getVisitClient();
+    return result;
+  }
+
+  @Put('/client')
+  async editPurchaseClient(@Body() { id, ...body }: EditClientDTO) {
+    await this.purchaseService.editPurchaseClient({ _id: id }, body);
+  }
+
+  @Get('/client')
+  async purchaseClientList(@Query() query: ClientListDTO) {
+    const result = await this.purchaseService.purchaseClientList(query);
     return result;
   }
 }

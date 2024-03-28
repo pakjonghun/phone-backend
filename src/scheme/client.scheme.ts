@@ -7,6 +7,9 @@ export interface IClient {
   note: string;
   uploadId: mongoose.Types.ObjectId;
   backupUploadId: mongoose.Types.ObjectId[];
+
+  //추가 정보
+  manager: string;
 }
 
 export type SaleDocument = HydratedDocument<Client>;
@@ -30,6 +33,9 @@ export class Client implements IClient {
 
   @Prop({ type: mongoose.Types.ObjectId })
   uploadId: mongoose.Types.ObjectId;
+
+  @Prop({ type: String })
+  manager: string;
 }
 
 export const ClientScheme = SchemaFactory.createForClass(Client);

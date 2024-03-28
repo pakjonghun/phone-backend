@@ -25,6 +25,8 @@ import {
 import { SaleListDTO } from './dto/sale.list.dto';
 import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { EditDashboardDTO } from './dto/edit.dashboard.dto';
+import { EditClientDTO } from './dto/edit.client.dto';
+import { ClientListDTO } from './dto/client.list.dto';
 
 @Controller()
 export class AppController {
@@ -120,6 +122,18 @@ export class AppController {
   @Get('/dashboard/visit-client')
   async getVisitClient() {
     const result = await this.appService.getVisitClient();
+    return result;
+  }
+
+  @Put('/sale-client')
+  async editSaleClient(@Body() { id, ...body }: EditClientDTO) {
+    console.log(id);
+    await this.appService.editSaleClient({ _id: id }, body);
+  }
+
+  @Get('/sale-client')
+  async saleClientList(@Query() query: ClientListDTO) {
+    const result = await this.appService.saleClientList(query);
     return result;
   }
 }
