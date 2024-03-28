@@ -821,7 +821,7 @@ export class AppService {
       },
     ];
 
-    const topTenSaleList = await this.saleModel.aggregate<{
+    const topTenSaleList = await this.priceSaleModel.aggregate<{
       _id: string;
       products: { product: string; accOutPrice: number };
     }>(pipeLine);
