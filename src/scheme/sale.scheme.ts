@@ -15,12 +15,16 @@ export interface ISale {
   note: string;
   rank: string;
   uploadId: string;
+  no: string;
 }
 
 export type SaleDocument = HydratedDocument<Sale>;
 
 @Schema({ timestamps: true, versionKey: false })
 export class Sale implements ISale {
+  @Prop({ type: String })
+  no: string;
+
   @Prop({ type: String })
   inDate: string;
 

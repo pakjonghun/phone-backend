@@ -9,6 +9,7 @@ export interface IPurchase {
   inPrice: number;
   note: string;
   uploadId: string;
+  no: string;
 }
 
 export type PurchaseDocument = HydratedDocument<Purchase>;
@@ -35,6 +36,9 @@ export class Purchase implements IPurchase {
 
   @Prop({ type: String })
   uploadId: string;
+
+  @Prop({ type: String })
+  no: string;
 }
 
 export const PurchaseScheme = SchemaFactory.createForClass(Purchase);

@@ -8,12 +8,20 @@ export interface IPriceSale {
   inPrice: number;
   outPrice: number;
   uploadId: string;
+  no: string;
+  imei: string;
 }
 
 export type PriceSaleDocument = HydratedDocument<IPriceSale>;
 
 @Schema({ timestamps: true, versionKey: false })
 export class PriceSale implements IPriceSale {
+  @Prop({ type: String })
+  no: string;
+
+  @Prop({ type: String })
+  imei: string;
+
   @Prop({ type: String })
   outDate: string;
 

@@ -38,7 +38,15 @@ export class Util {
     return dayjs().subtract(1, 'year').format('YYYYMMDDHHmmss');
   }
 
+  static DecadeAgo() {
+    return dayjs().subtract(12, 'year').format('YYYYMMDDHHmmss');
+  }
+
   static MonthAfter() {
     return dayjs().add(1, 'month').format('YYYYMMDDHHmmss');
+  }
+
+  static DecadeAfter() {
+    return dayjs().add(12, 'year').format('YYYYMMDDHHmmss');
   }
 }

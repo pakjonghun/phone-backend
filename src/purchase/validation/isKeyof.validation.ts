@@ -10,6 +10,7 @@ const purchaseSortKey: Record<
   keyof Omit<IPurchase, '_id' | 'uploadId'>,
   number
 > = {
+  no: 1,
   inDate: 1,
   inClient: 1,
   product: 1,

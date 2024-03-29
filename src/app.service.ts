@@ -8,6 +8,7 @@ import mongoose, {
   FilterQuery,
   Model,
   PipelineStage,
+  Types,
   UpdateQuery,
 } from 'mongoose';
 import { Client } from './scheme/client.scheme';
@@ -102,13 +103,6 @@ export class AppService {
               clientMap.set(stringValue, '');
             }
           }
-          if (fieldName === 'imei') {
-            if (!value) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 IMEI를 입력해주세요.`,
-              );
-            }
-          }
 
           newSale[fieldName as string] = value;
 
@@ -150,6 +144,107 @@ export class AppService {
 
       if (newDocument.length === 0) {
         throw new BadRequestException('입력 가능한 데이터가 없습니다.');
+      }
+
+      const bothKeyNull = newDocument.some(
+        (item) => item.no == null && item.imei == null,
+      );
+      if (bothKeyNull) {
+        throw new BadRequestException(
+          '엑셀파일에 IMEI와 일련번호가 모두 입력되지 않은 데이터가 있습니다.',
+        );
+      }
+
+      const outDateImei = newDocument
+        .filter((item) => !!item.imei)
+        .map((item) => `${item.outDate}_${item.imei}`);
+
+      const nos = newDocument.map((item) => item.no).filter((item) => !!item);
+      const hasSameNo = nos.length !== new Set(nos).size;
+      const hasSameId = outDateImei.length !== new Set(outDateImei).size;
+      if (hasSameId) {
+        throw new BadRequestException(
+          '엑셀파일에 같은 판매일에 같은 IMEI가 입력되어 있습니다. 같은 판매일에 중복되는 IMEI 제거해주세요.',
+        );
+      }
+
+      if (hasSameNo) {
+        throw new BadRequestException(
+          '엑셀파일에 같은 일련번호가 입력되어 있습니다. 중복되는 일련번호를 제거해주세요.',
+        );
+      }
+
+      const outDateImeiObjs = newDocument
+        .filter((item) => !!item.imei)
+        .map((item) => ({
+          imei: item.imei,
+          outDate: item.outDate,
+        }));
+
+      if (outDateImeiObjs.length) {
+        const duplicatedItems = await this.saleModel.find({
+          $or: [
+            {
+              $or: outDateImeiObjs,
+            },
+            {
+              no: { $in: nos },
+            },
+          ],
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.product)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 같은 날짜에 IMEI가 입력되어 있거나 일련번호가 같은 데이터가 존재합니다.`,
+          );
+        }
+      } else {
+        const duplicatedItems = await this.saleModel.find({
+          no: { $in: nos },
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.no)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 일련번호가 이미 입력되어 데이터 입니다.`,
+          );
+        }
+      }
+
+      if (outDateImeiObjs.length) {
+        const duplicatedItems = await this.priceSaleModel.find({
+          $or: [
+            {
+              $or: outDateImeiObjs,
+            },
+            {
+              no: { $in: nos },
+            },
+          ],
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.product)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 같은 날짜에 IMEI가 입력되어 있거나 일련번호가 같은 데이터가 존재합니다.`,
+          );
+        }
+      } else {
+        const duplicatedItems = await this.priceSaleModel.find({
+          no: { $in: nos },
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.no)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 일련번호가 이미 입력되어 데이터 입니다.`,
+          );
+        }
       }
 
       const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
@@ -212,28 +307,6 @@ export class AppService {
         })),
       );
 
-      const imeis = newDocument.map((item) => item.imei);
-      const hasSameId = imeis.length !== new Set(imeis).size;
-      if (hasSameId) {
-        throw new BadRequestException(
-          '엑셀파일에 같은 IMEI가 입력되어 있습니다. 중복되는 IMEI 제거해주세요.',
-        );
-      }
-
-      const duplicatedItems = await this.saleModel.find({
-        imei: { $in: imeis },
-        outDate: {
-          $gt: dayjs().startOf('day'),
-          $lt: dayjs().endOf('day'),
-        },
-      });
-      if (duplicatedItems.length) {
-        const duplicatedIds = duplicatedItems.map((item) => item._id).join(',');
-        throw new BadRequestException(
-          `${duplicatedIds}는 이미 입력되어 있는 IMEI입니다.`,
-        );
-      }
-
       await this.saleModel.bulkWrite(
         newDocument.map((document) => ({
           insertOne: { document },
@@ -268,10 +341,10 @@ export class AppService {
       outDate: {
         $gte: startDate
           ? dayjs(startDate).format('YYYYMMDDHHmmss')
-          : Util.YearAgo(),
+          : Util.DecadeAgo(),
         $lte: endDate
           ? dayjs(endDate).format('YYYYMMDDHHmmss')
-          : Util.MonthAfter(),
+          : Util.DecadeAfter(),
       },
     };
     const totalCount = await this.saleModel.countDocuments(filter);
@@ -286,7 +359,6 @@ export class AppService {
       .sort({ ...sortObj, _id: 1 })
       .skip((page - 1) * length)
       .limit(length);
-
     return {
       totalCount,
       hasNext,
@@ -295,14 +367,8 @@ export class AppService {
   }
 
   async downloadSale(idList: string[]) {
-    const promises = idList.map((item) => {
-      const split = item.split('_');
-      const imei = split[0];
-      const outDate = split[1];
-      return this.saleModel.findOne({ imei, outDate });
-    });
-
-    const stream = await Promise.all(promises);
+    const objIdList = idList.map((id) => new Types.ObjectId(id));
+    const stream = await this.saleModel.find({ _id: { $in: objIdList } });
 
     // const stream = await this.saleModel.find({ _id: { $in: idList } });
     const workbook = new ExcelJS.Workbook();
@@ -312,18 +378,18 @@ export class AppService {
 
     for await (const doc of stream) {
       const newDoc = {
-        inDate: doc.inDate,
-        inClient: doc.inClient,
-        outDate: doc.outDate,
-        outClient: doc.outClient,
-        product: doc.product,
+        inDate: doc?.inDate ?? '',
+        inClient: doc?.inClient ?? '',
+        outDate: doc?.outDate ?? '',
+        outClient: doc?.outClient ?? '',
+        product: doc?.product ?? '',
         _id: doc._id,
-        imei: doc.imei,
-        inPrice: doc.inPrice,
-        outPrice: doc.outPrice,
-        margin: doc.margin,
+        imei: doc?.imei ?? '',
+        inPrice: doc?.inPrice ?? '',
+        outPrice: doc?.outPrice ?? '',
+        margin: doc?.margin ?? '',
         marginRate: doc.marginRate,
-        note: doc.note,
+        note: doc?.note ?? '',
       };
 
       worksheet.addRow(newDoc);

@@ -6,6 +6,7 @@ import mongoose, {
   FilterQuery,
   Model,
   PipelineStage,
+  Types,
   UpdateQuery,
 } from 'mongoose';
 import { Util } from '../common/helper/service.helper';
@@ -88,14 +89,6 @@ export class PurchaseService {
             productSet.add(modelNumber);
           }
 
-          if (fieldName === 'imei') {
-            if (!value) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 IMEI를 입력해주세요.`,
-              );
-            }
-          }
-
           newPurchase[fieldName as string] = value;
 
           const isExist = newPurchase.schema.path(fieldName);
@@ -161,6 +154,68 @@ export class PurchaseService {
           }),
       );
 
+      const noImeiNull = newDocument.some(
+        (item) => item.imei == null && item.no == null,
+      );
+
+      if (noImeiNull) {
+        throw new BadRequestException(
+          '엑셀파일에 IMEI와 일련번호가 모두 입력되지 않은 데이터가 있습니다.',
+        );
+      }
+
+      const inDateImei = newDocument
+        .filter((item) => !!item.imei)
+        .map((item) => `${item.inDate}_${item.imei}`);
+
+      const nos = newDocument
+        .filter((item) => !!item.no)
+        .map((item) => item.no);
+
+      const hasSameId = inDateImei.length !== new Set(inDateImei).size;
+      const hasSameNo = nos.length !== new Set(nos).size;
+      if (hasSameId) {
+        throw new BadRequestException(
+          '엑셀파일에 같은 매입일에 같은 IMEI가 입력되어 있습니다. 같은 매입일에 중복되는 IMEI 제거해주세요.',
+        );
+      }
+
+      if (hasSameNo) {
+        throw new BadRequestException(
+          '엑셀파일에 같은 일련번호가 입력되어 있습니다. 중복되는 일련번호를 제거해주세요.',
+        );
+      }
+
+      const inDateImeiObjs = newDocument
+        .filter((item) => !!item.imei)
+        .map((item) => ({ imei: item.imei, inDate: item.inDate }));
+
+      if (inDateImeiObjs.length) {
+        const duplicatedItems = await this.purchaseModel.find({
+          $or: [{ no: { $in: nos } }, { $or: inDateImeiObjs }],
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.product)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 같은 날짜에 IMEI가 입력되어 있거나 일련번호가 같은 데이터가 존재합니다.`,
+          );
+        }
+      } else {
+        const duplicatedItems = await this.purchaseModel.find({
+          no: { $in: nos },
+        });
+        if (duplicatedItems.length) {
+          const duplicatedIds = duplicatedItems
+            .map((item) => item.no)
+            .join(',');
+          throw new BadRequestException(
+            `${duplicatedIds}는 일련번호가 이미 입력되어 데이터 입니다.`,
+          );
+        }
+      }
+
       await this.purchaseClientModel.insertMany(insertClientList);
       await this.purchaseClientModel.bulkWrite(
         Array.from(existClientList).map(([clientId, lastInDate]) => ({
@@ -192,28 +247,6 @@ export class PurchaseService {
         })),
       );
 
-      const imeis = newDocument.map((item) => item.imei);
-      const hasSameId = imeis.length !== new Set(imeis).size;
-      if (hasSameId) {
-        throw new BadRequestException(
-          '엑셀파일에 같은 IMEI가 입력되어 있습니다. 중복되는 IMEI 제거해주세요.',
-        );
-      }
-
-      const duplicatedItems = await this.purchaseModel.find({
-        imei: { $in: imeis },
-        inDate: {
-          $gt: dayjs().startOf('day'),
-          $lt: dayjs().endOf('day'),
-        },
-      });
-      if (duplicatedItems.length) {
-        const duplicatedIds = duplicatedItems.map((item) => item._id).join(',');
-        throw new BadRequestException(
-          `${duplicatedIds}는 이미 입력되어 있는 IMEI입니다.`,
-        );
-      }
-
       await this.purchaseModel.bulkWrite(
         newDocument.map((document) => ({
           insertOne: { document },
@@ -242,10 +275,10 @@ export class PurchaseService {
       inDate: {
         $gte: startDate
           ? dayjs(startDate).format('YYYYMMDDHHmmss')
-          : Util.YearAgo(),
+          : Util.DecadeAgo(),
         $lte: endDate
           ? dayjs(endDate).format('YYYYMMDDHHmmss')
-          : Util.MonthAfter(),
+          : Util.DecadeAfter(),
       },
     };
     const totalCount = await this.purchaseModel.countDocuments(filter);
@@ -269,16 +302,9 @@ export class PurchaseService {
   }
 
   async download(idList: string[]) {
-    const promises = idList.map((item) => {
-      const split = item.split('_');
-      const imei = split[0];
-      const inDate = split[1];
-      return this.purchaseModel.findOne({ imei, inDate });
-    });
+    const objIdList = idList.map((id) => new Types.ObjectId(id));
+    const stream = await this.purchaseModel.find({ _id: { $in: objIdList } });
 
-    const stream = await Promise.all(promises);
-
-    // const stream = await this.saleModel.find({ _id: { $in: idList } });
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('판매시트');
 

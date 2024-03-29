@@ -60,6 +60,7 @@ const saleSortKey: Record<keyof Omit<SaleSortKey, '_id' | 'uploadId'>, number> =
     marginRate: 1,
     note: 1,
     rank: 1,
+    no: 1,
   };
 
 @ValidatorConstraint({ async: false })
