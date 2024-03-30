@@ -24,6 +24,7 @@ import { UploadRecord } from './scheme/upload.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
 import { ClientListDTO } from './dto/client.list.dto';
+import { Page } from './dto/page.dto';
 
 @Injectable()
 export class AppService {
@@ -685,11 +686,16 @@ export class AppService {
     return todayTopClient;
   };
 
-  async getVisitClient() {
+  async getVisitClient({ page, length }: Page) {
+    const filter = { lastOutDate: { $exists: true } };
+    const totalCount = await this.clientModel.countDocuments(filter);
+    const hasNext = page * length < totalCount;
+
     const notVisitedOutClient = await this.clientModel
       .find({ lastOutDate: { $exists: true } })
       .sort({ lastOutDate: 1, _id: 1 })
-      .limit(10)
+      .skip((page - 1) * length)
+      .limit(length)
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
@@ -740,6 +746,12 @@ export class AppService {
       };
       return newItem;
     });
+
+    return {
+      data: result,
+      hasNext,
+      totalCount,
+    };
 
     return result;
   }

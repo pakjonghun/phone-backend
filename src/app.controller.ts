@@ -27,6 +27,7 @@ import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 import { EditClientDTO } from './dto/edit.client.dto';
 import { ClientListDTO } from './dto/client.list.dto';
+import { Page } from './dto/page.dto';
 
 @Controller()
 export class AppController {
@@ -120,8 +121,8 @@ export class AppController {
   }
 
   @Get('/dashboard/visit-client')
-  async getVisitClient() {
-    const result = await this.appService.getVisitClient();
+  async getVisitClient(@Query() pageParam: Page) {
+    const result = await this.appService.getVisitClient(pageParam);
     return result;
   }
 
