@@ -536,7 +536,7 @@ export class PurchaseService {
     const notVisitedOutClient = await this.purchaseClientModel
       .find({ lastInDate: { $exists: true } })
       .sort({ lastInDate: 1, _id: 1 })
-      .limit(10)
+      .limit(100)
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
