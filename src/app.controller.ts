@@ -28,6 +28,7 @@ import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 import { EditClientDTO } from './dto/edit.client.dto';
 import { ClientListDTO } from './dto/client.list.dto';
 import { Page } from './dto/page.dto';
+import { DashboardMonthDTO } from './dto/dashboard.month.dto';
 
 @Controller()
 export class AppController {
@@ -86,8 +87,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-sale')
-  async getMonthSale() {
-    const result = await this.appService.getMonthSale();
+  async getMonthSale(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthSale(date);
     return result;
   }
 

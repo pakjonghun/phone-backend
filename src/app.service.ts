@@ -25,6 +25,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
 import { ClientListDTO } from './dto/client.list.dto';
 import { Page } from './dto/page.dto';
+import { DashboardMonthDTO } from './dto/dashboard.month.dto';
 
 @Injectable()
 export class AppService {
@@ -400,12 +401,14 @@ export class AppService {
     return buffer;
   }
 
-  async getMonthSale() {
+  async getMonthSale({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+    const { from, to } = Util.GetRange(date);
     const monthSale = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
