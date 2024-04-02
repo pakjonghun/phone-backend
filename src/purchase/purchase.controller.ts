@@ -81,7 +81,7 @@ export class PurchaseController {
   }
 
   @Get('/dashboard/month-purchase')
-  async getMonthPurchase(date: DashboardMonthDTO) {
+  async getMonthPurchase(@Query() date: DashboardMonthDTO) {
     const result = await this.purchaseService.getMonthPurchase(date);
     return result;
   }

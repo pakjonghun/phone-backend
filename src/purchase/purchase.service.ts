@@ -329,7 +329,7 @@ export class PurchaseService {
     return buffer;
   }
 
-  async getMonthPurchase({ date }: DashboardMonthDTO) {
+  async getMonthPurchase({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthSale = await this.purchaseModel.aggregate([
       {
@@ -373,7 +373,7 @@ export class PurchaseService {
     return todaySale[0];
   }
 
-  async getMonthTopProduct({ date }: DashboardMonthDTO) {
+  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthTopProduct = await this.purchaseModel.aggregate([
       {
@@ -456,7 +456,9 @@ export class PurchaseService {
     return todayTopProduct;
   }
 
-  getMonthTopClient = async ({ date }: DashboardMonthDTO) => {
+  getMonthTopClient = async ({
+    date = Util.GetMonthAgo(),
+  }: DashboardMonthDTO) => {
     const { from, to } = Util.GetMonthRange(date);
     const monthTopClient = await this.purchaseModel.aggregate([
       {
