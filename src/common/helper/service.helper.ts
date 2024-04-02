@@ -50,7 +50,7 @@ export class Util {
     return dayjs().add(12, 'year').format('YYYYMMDDHHmmss');
   }
 
-  static GetRange(date: string) {
+  static GetMonthRange(date: string) {
     const from = dayjs(date).startOf('month').format('YYYYMMDDHHmmss');
     const to = dayjs(date).endOf('month').format('YYYYMMDDHHmmss');
     return { from, to };

@@ -99,8 +99,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-product')
-  async getMonthTopProduct() {
-    const result = await this.appService.getMonthTopProduct();
+  async getMonthTopProduct(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthTopProduct(date);
     return result;
   }
   @Get('/dashboard/today-product')
@@ -110,8 +110,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-client')
-  async getMonthTopClient() {
-    const result = await this.appService.getMonthTopClient();
+  async getMonthTopClient(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthTopClient(date);
     return result;
   }
 

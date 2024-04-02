@@ -22,6 +22,7 @@ import { UploadPurchaseRecord } from 'src/scheme/upload.purchase.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Client } from 'src/scheme/client.scheme';
 import { ClientListDTO } from 'src/dto/client.list.dto';
+import { DashboardMonthDTO } from 'src/dto/dashboard.month.dto';
 
 @Injectable()
 export class PurchaseService {
@@ -328,12 +329,14 @@ export class PurchaseService {
     return buffer;
   }
 
-  async getMonthPurchase() {
+  async getMonthPurchase({ date }: DashboardMonthDTO) {
+    const { from, to } = Util.GetMonthRange(date);
     const monthSale = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
@@ -370,12 +373,14 @@ export class PurchaseService {
     return todaySale[0];
   }
 
-  async getMonthTopProduct() {
+  async getMonthTopProduct({ date }: DashboardMonthDTO) {
+    const { from, to } = Util.GetMonthRange(date);
     const monthTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
@@ -451,12 +456,14 @@ export class PurchaseService {
     return todayTopProduct;
   }
 
-  getMonthTopClient = async () => {
+  getMonthTopClient = async ({ date }: DashboardMonthDTO) => {
+    const { from, to } = Util.GetMonthRange(date);
     const monthTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
