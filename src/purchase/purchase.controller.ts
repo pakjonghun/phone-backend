@@ -27,6 +27,7 @@ import { EditDashboardDTO } from 'src/dto/edit.dashboard.dto';
 import { PurchaseListDTO } from './dto/purchase.list.dto';
 import { EditClientDTO } from 'src/dto/edit.client.dto';
 import { ClientListDTO } from 'src/dto/client.list.dto';
+import { DashboardMonthDTO } from 'src/dto/dashboard.month.dto';
 
 @Controller('purchase')
 export class PurchaseController {
@@ -80,8 +81,8 @@ export class PurchaseController {
   }
 
   @Get('/dashboard/month-purchase')
-  async getMonthPurchase() {
-    const result = await this.purchaseService.getMonthPurchase();
+  async getMonthPurchase(@Query() date: DashboardMonthDTO) {
+    const result = await this.purchaseService.getMonthPurchase(date);
     return result;
   }
 
@@ -92,8 +93,8 @@ export class PurchaseController {
   }
 
   @Get('/dashboard/month-product')
-  async getMonthTopProduct() {
-    const result = await this.purchaseService.getMonthTopProduct();
+  async getMonthTopProduct(@Query() date: DashboardMonthDTO) {
+    const result = await this.purchaseService.getMonthTopProduct(date);
     return result;
   }
   @Get('/dashboard/today-product')
@@ -103,8 +104,8 @@ export class PurchaseController {
   }
 
   @Get('/dashboard/month-client')
-  async getMonthTopClient() {
-    const result = await this.purchaseService.getMonthTopClient();
+  async getMonthTopClient(@Query() date: DashboardMonthDTO) {
+    const result = await this.purchaseService.getMonthTopClient(date);
     return result;
   }
 

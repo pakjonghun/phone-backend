@@ -25,6 +25,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
 import { ClientListDTO } from './dto/client.list.dto';
 import { Page } from './dto/page.dto';
+import { DashboardMonthDTO } from './dto/dashboard.month.dto';
 
 @Injectable()
 export class AppService {
@@ -400,12 +401,14 @@ export class AppService {
     return buffer;
   }
 
-  async getMonthSale() {
+  async getMonthSale({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+    const { from, to } = Util.GetMonthRange(date);
     const monthSale = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
@@ -476,12 +479,14 @@ export class AppService {
     return todaySale[0];
   }
 
-  async getMonthTopProduct() {
+  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+    const { from, to } = Util.GetMonthRange(date);
     const monthTopProduct = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },
@@ -577,12 +582,17 @@ export class AppService {
     return todayTopProduct;
   }
 
-  getMonthTopClient = async () => {
+  getMonthTopClient = async ({
+    date = Util.GetMonthAgo(),
+  }: DashboardMonthDTO) => {
+    const { from, to } = Util.GetMonthRange(date);
+
     const monthTopClient = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetMonthAgo(),
+            $gte: from,
+            $lte: to,
           },
         },
       },

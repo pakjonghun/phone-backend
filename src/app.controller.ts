@@ -28,6 +28,7 @@ import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 import { EditClientDTO } from './dto/edit.client.dto';
 import { ClientListDTO } from './dto/client.list.dto';
 import { Page } from './dto/page.dto';
+import { DashboardMonthDTO } from './dto/dashboard.month.dto';
 
 @Controller()
 export class AppController {
@@ -86,8 +87,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-sale')
-  async getMonthSale() {
-    const result = await this.appService.getMonthSale();
+  async getMonthSale(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthSale(date);
     return result;
   }
 
@@ -98,8 +99,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-product')
-  async getMonthTopProduct() {
-    const result = await this.appService.getMonthTopProduct();
+  async getMonthTopProduct(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthTopProduct(date);
     return result;
   }
   @Get('/dashboard/today-product')
@@ -109,8 +110,8 @@ export class AppController {
   }
 
   @Get('/dashboard/month-client')
-  async getMonthTopClient() {
-    const result = await this.appService.getMonthTopClient();
+  async getMonthTopClient(@Query() date: DashboardMonthDTO) {
+    const result = await this.appService.getMonthTopClient(date);
     return result;
   }
 
