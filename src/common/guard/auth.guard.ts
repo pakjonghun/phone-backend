@@ -32,7 +32,6 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest() as Request;
     const userInfo = request['userInfo'];
     const role = userInfo?.role;
-    console.log('guard user', userInfo);
     if (authType == null) return true;
 
     if (AUTH_TYPE.ANY === authType) {

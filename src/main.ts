@@ -13,8 +13,9 @@ async function bootstrap() {
     credentials: true,
   });
   //
-  app.setGlobalPrefix('/api');
+
   app.use(cookieParser());
+  app.setGlobalPrefix('/api');
   app.useGlobalFilters(
     new FallbackFilter(),
     new HttpFilter(),

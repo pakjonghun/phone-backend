@@ -17,15 +17,13 @@ export class SaveCookieInterceptor implements NestInterceptor {
     const oneWeek = 1000 * 60 * 60 * 24 * 7;
     return next.handle().pipe(
       map((userInfo) => {
-        console.log('userInfo.token : ', userInfo.token);
-        console.log('cookie', this.config.get('COOKIE_DOMAIN'));
         response.cookie('userInfo', userInfo.token, {
-          // domain: this.config.get('COOKIE_DOMAIN'),
+          domain: this.config.get('COOKIE_DOMAIN'),
           maxAge: oneWeek,
           httpOnly: true,
-          // secure: true,
-          // sameSite: 'none',
-          // path: '/',
+          secure: true,
+          sameSite: 'none',
+          path: '/',
         });
         return { message: 'success', userInfo: userInfo.payload };
       }),

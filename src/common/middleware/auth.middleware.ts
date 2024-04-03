@@ -14,7 +14,6 @@ export class SetUserInfoMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: (error?: any) => void) {
     try {
       const accessToken = req.cookies['userInfo'] ?? req.headers.cookie;
-      console.log('accessToken', accessToken);
       if (accessToken) {
         const jwtSecret = this.configService.get('JWT_SECRET');
         const userInfo = this.jwtService.verify(accessToken, {
