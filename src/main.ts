@@ -12,7 +12,7 @@ async function bootstrap() {
     origin: process.env.WHITE_URL,
     credentials: true,
   });
-
+  //
   app.setGlobalPrefix('/api');
   app.use(cookieParser());
   app.useGlobalFilters(
