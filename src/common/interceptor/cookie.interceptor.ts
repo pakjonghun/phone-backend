@@ -20,12 +20,12 @@ export class SaveCookieInterceptor implements NestInterceptor {
         console.log('userInfo.token : ', userInfo.token);
         console.log('cookie', this.config.get('COOKIE_DOMAIN'));
         response.cookie('userInfo', userInfo.token, {
-          domain: this.config.get('COOKIE_DOMAIN'),
+          // domain: this.config.get('COOKIE_DOMAIN'),
           maxAge: oneWeek,
-          // httpOnly: true,
+          httpOnly: true,
           // secure: true,
           // sameSite: 'none',
-          path: '/',
+          // path: '/',
         });
         return { message: 'success', userInfo: userInfo.payload };
       }),
