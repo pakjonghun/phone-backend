@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - yarn install
+  build:
+    commands:
+      - echo Build started on `date`
+      - yarn build
+artifacts:
+  files:
+    - 'node_modules/**/*'
+    - 'dist/**/*'
+    - 'Procfile'
+    - 'package.json'
