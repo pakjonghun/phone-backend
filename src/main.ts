@@ -13,6 +13,7 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.setGlobalPrefix('/api');
   app.use(cookieParser());
   app.useGlobalFilters(
     new FallbackFilter(),
