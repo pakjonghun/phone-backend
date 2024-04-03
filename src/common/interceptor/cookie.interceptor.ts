@@ -22,9 +22,9 @@ export class SaveCookieInterceptor implements NestInterceptor {
         response.cookie('userInfo', userInfo.token, {
           domain: this.config.get('COOKIE_DOMAIN'),
           maxAge: oneWeek,
-          httpOnly: true,
+          // httpOnly: true,
           // secure: true,
-          sameSite: 'none',
+          // sameSite: 'none',
           path: '/',
         });
         return { message: 'success', userInfo: userInfo.payload };
