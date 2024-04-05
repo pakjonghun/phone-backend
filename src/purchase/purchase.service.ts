@@ -76,6 +76,8 @@ export class PurchaseService {
                 `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
               );
             }
+            console.log('rowcol', cell.$col$row);
+            console.log('field', fieldName);
             console.log('date', value);
             value = Util.GetDateString(value.toString());
           }
