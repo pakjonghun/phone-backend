@@ -44,7 +44,11 @@ export class PurchaseService {
 
     const productSet = new Set<string>();
     const clientMap = new Map<string, string>();
-    const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {});
+    const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {
+      sharedStrings: 'cache',
+      styles: 'ignore',
+      hyperlinks: 'cache',
+    });
     const newDocument = [];
     let rowCount = 0;
     for await (const sheet of stream) {
