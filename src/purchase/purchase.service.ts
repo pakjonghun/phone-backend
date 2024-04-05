@@ -46,8 +46,9 @@ export class PurchaseService {
     const clientMap = new Map<string, string>();
     const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {
       sharedStrings: 'cache',
-      styles: 'ignore',
       hyperlinks: 'cache',
+      worksheets: 'emit',
+      styles: 'cache',
     });
     const newDocument = [];
     let rowCount = 0;
@@ -66,14 +67,6 @@ export class PurchaseService {
           (_, k) => k + 1,
         );
 
-        row.eachCell((cell, index) => {
-          const fieldName = this.purchaseExcelMapper[index] as string;
-          const value = cell.value;
-          if (fieldName === 'inDate') {
-            console.log('for each value', value);
-          }
-        });
-
         for await (const length of columnArray) {
           const cell = row.getCell(length);
           const fieldName = this.purchaseExcelMapper[length] as string;
@@ -88,10 +81,7 @@ export class PurchaseService {
                 `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
               );
             }
-
-            console.log('rowcol', cell.$col$row);
-            console.log('field', fieldName);
-            console.log('date', value);
+            console.log('날짜 확인', value);
             value = Util.GetDateString(
               value.toString(),
               `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,

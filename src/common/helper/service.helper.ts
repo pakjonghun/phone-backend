@@ -8,9 +8,7 @@ export class Util {
   }
 
   static GetDateString(date: string, errorMsg?: string) {
-    console.log('func', date);
     const isDate = Util.IsDate(date);
-    console.log('validate result', isDate);
     if (!isDate)
       throw new BadRequestException(
         errorMsg ?? `${date}는 올바른 날짜 형식이 아닙니다.`,
