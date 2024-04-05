@@ -73,12 +73,10 @@ export class PurchaseService {
               `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
             );
           }
-          console.log('날짜 확인', value);
           value = Util.GetDateString(
             value.toString(),
             `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
           );
-          console.log(value, 'value date');
         }
 
         if (fieldName === 'product') {
