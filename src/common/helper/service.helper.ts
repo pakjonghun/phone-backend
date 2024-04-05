@@ -17,6 +17,11 @@ export class Util {
     return dayjs(date).format('YYYYMMDDHHmmss');
   }
 
+  static ValidDateFormat(date: string) {
+    const dateReg = /^\d{4}-\d{1,2}-\d{1,2}$/;
+    return dateReg.test(date.trim());
+  }
+
   static GetMonthAgo() {
     return dayjs(new Date()).startOf('month').format('YYYYMMDDHHmmss');
   }
