@@ -19,7 +19,7 @@ export class Purchase implements IPurchase {
   @Prop({ type: String })
   inDate: string;
 
-  @Prop({ type: String })
+  @Prop({ type: String, required: true })
   inClient: string;
 
   @Prop({ type: String })
