@@ -63,9 +63,9 @@ export class PurchaseService {
         );
 
         row.eachCell((cell, index) => {
-          const field = this.purchaseExcelMapper[index + 1] as string;
+          const fieldName = this.purchaseExcelMapper[index] as string;
           const value = cell.value;
-          if (field === 'inDate') {
+          if (fieldName === 'inDate') {
             console.log('for each value', value);
           }
         });
