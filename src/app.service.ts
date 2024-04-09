@@ -732,9 +732,15 @@ export class AppService {
               {
                 $multiply: [
                   {
-                    $divide: [
-                      { $subtract: ['$accOutPrice', '$accInPrice'] },
-                      '$accOutPrice',
+                    $cond: [
+                      { $eq: ['$accOutPrice', 0] },
+                      0,
+                      {
+                        $divide: [
+                          { $subtract: ['$accOutPrice', '$accInPrice'] },
+                          '$accOutPrice',
+                        ],
+                      },
                     ],
                   },
                   100,
