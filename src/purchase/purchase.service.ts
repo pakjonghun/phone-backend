@@ -538,7 +538,7 @@ export class PurchaseService {
     return todayTopClient;
   };
 
-  async getVisitClient() {
+  async getVisitClient({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
     const notVisitedOutClient = await this.purchaseClientModel
       .find({ lastInDate: { $exists: true } })
       .sort({ lastInDate: 1, _id: 1 })
@@ -546,7 +546,6 @@ export class PurchaseService {
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
-    const date = Util.GetMonthAgo();
     const { from, to } = Util.GetMonthRange(date);
 
     const clientPurchase = await this.purchaseModel.aggregate([
@@ -564,6 +563,7 @@ export class PurchaseService {
           _id: '$inClient',
           accInPrice: { $sum: '$inPrice' },
           count: { $sum: 1 },
+          inDates: { $push: '$inDate' },
         },
       },
     ]);

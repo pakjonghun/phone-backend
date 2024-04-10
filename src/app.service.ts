@@ -24,8 +24,8 @@ import { UploadRecord } from './scheme/upload.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
 import { ClientListDTO } from './dto/client.list.dto';
-import { Page } from './dto/page.dto';
 import { DashboardMonthDTO } from './dto/dashboard.month.dto';
+import { MonthPageDTO } from './dto/month-page.dto';
 
 @Injectable()
 export class AppService {
@@ -696,7 +696,11 @@ export class AppService {
     return todayTopClient;
   };
 
-  async getVisitClient({ page, length }: Page) {
+  async getVisitClient({
+    date = Util.GetMonthAgo(),
+    page,
+    length,
+  }: MonthPageDTO) {
     const filter = { lastOutDate: { $exists: true } };
     const totalCount = await this.clientModel.countDocuments(filter);
     const hasNext = page * length < totalCount;
@@ -709,7 +713,6 @@ export class AppService {
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
-    const date = Util.GetMonthAgo();
     const { from, to } = Util.GetMonthRange(date);
 
     const clientSales = await this.priceSaleModel.aggregate([
@@ -757,6 +760,7 @@ export class AppService {
         },
       },
     ]);
+
     const result = notVisitedOutClient.map((item) => {
       const targetSale = clientSales.find((jtem) => jtem._id === item._id);
       const newItem = {
@@ -773,8 +777,6 @@ export class AppService {
       hasNext,
       totalCount,
     };
-
-    return result;
   }
 
   async reset() {

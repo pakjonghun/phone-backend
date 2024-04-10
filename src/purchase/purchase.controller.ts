@@ -116,8 +116,8 @@ export class PurchaseController {
   }
 
   @Get('/dashboard/visit-client')
-  async getVisitClient() {
-    const result = await this.purchaseService.getVisitClient();
+  async getVisitClient(@Query() date: DashboardMonthDTO) {
+    const result = await this.purchaseService.getVisitClient(date);
     return result;
   }
 
