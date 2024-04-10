@@ -709,11 +709,17 @@ export class AppService {
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
+    const date = Util.GetMonthAgo();
+    const { from, to } = Util.GetMonthRange(date);
 
     const clientSales = await this.priceSaleModel.aggregate([
       {
         $match: {
           outClient: { $in: clientIds },
+          outDate: {
+            $gte: from,
+            $lte: to,
+          },
         },
       },
       {

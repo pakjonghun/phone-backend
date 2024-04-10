@@ -546,11 +546,17 @@ export class PurchaseService {
       .lean();
 
     const clientIds = notVisitedOutClient.map((item) => item._id);
+    const date = Util.GetMonthAgo();
+    const { from, to } = Util.GetMonthRange(date);
 
     const clientPurchase = await this.purchaseModel.aggregate([
       {
         $match: {
           inClient: { $in: clientIds },
+          inDate: {
+            $gte: from,
+            $lte: to,
+          },
         },
       },
       {
