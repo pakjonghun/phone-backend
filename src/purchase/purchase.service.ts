@@ -551,7 +551,6 @@ export class PurchaseService {
       {
         $match: {
           inClient: { $in: clientIds },
-          inDate: { $gt: Util.GetMonthAgo() },
         },
       },
       {

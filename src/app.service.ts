@@ -714,7 +714,6 @@ export class AppService {
       {
         $match: {
           outClient: { $in: clientIds },
-          outDate: { $gt: Util.GetMonthAgo() },
         },
       },
       {
