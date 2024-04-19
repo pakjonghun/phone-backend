@@ -76,7 +76,6 @@ export class AppService {
           const fieldName = this.saleExcelMapper[length] as string;
           if (!fieldName) continue;
           const target = newSale.schema.path(fieldName)!;
-
           let value =
             typeof cell.value == 'string' ? cell.value.trim() : cell.value;
           if (fieldName.toLowerCase().includes('date')) {
@@ -85,7 +84,6 @@ export class AppService {
                 `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
               );
             }
-
             value = Util.GetDateString(value.toString());
           }
 
@@ -183,70 +181,54 @@ export class AppService {
           outDate: item.outDate,
         }));
 
-      if (outDateImeiObjs.length) {
-        const duplicatedItems = await this.saleModel.find({
-          $or: [
-            {
-              $or: outDateImeiObjs,
-            },
-            {
-              no: { $in: nos },
-            },
-          ],
-        });
-        if (duplicatedItems.length) {
-          const duplicatedIds = duplicatedItems
-            .map((item) => item.product)
-            .join(',');
-          throw new BadRequestException(
-            `${duplicatedIds}는 같은 날짜에 IMEI가 입력되어 있거나 일련번호가 같은 데이터가 존재합니다.`,
-          );
-        }
-      } else {
-        const duplicatedItems = await this.saleModel.find({
-          no: { $in: nos },
-        });
-        if (duplicatedItems.length) {
-          const duplicatedIds = duplicatedItems
-            .map((item) => item.no)
-            .join(',');
-          throw new BadRequestException(
-            `${duplicatedIds}는 일련번호가 이미 입력되어 데이터 입니다.`,
-          );
-        }
+      const imeiDuplicatedItems = await this.saleModel.find({
+        $or: outDateImeiObjs,
+      });
+      if (imeiDuplicatedItems.length) {
+        const duplicatedIds = imeiDuplicatedItems
+          .map(
+            (item) =>
+              `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
+          )
+          .join(',');
+        throw new BadRequestException(
+          `${duplicatedIds}는 같은 판매날짜에 IMEI가 이미 입력되어 있습니다.`,
+        );
+      }
+      const duplicatedNos = await this.saleModel.find({
+        no: { $in: nos },
+      });
+      if (duplicatedNos.length) {
+        const duplicatedIds = duplicatedNos.map((item) => item.no).join(',');
+        throw new BadRequestException(
+          `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
+        );
       }
 
-      if (outDateImeiObjs.length) {
-        const duplicatedItems = await this.priceSaleModel.find({
-          $or: [
-            {
-              $or: outDateImeiObjs,
-            },
-            {
-              no: { $in: nos },
-            },
-          ],
-        });
-        if (duplicatedItems.length) {
-          const duplicatedIds = duplicatedItems
-            .map((item) => item.product)
-            .join(',');
-          throw new BadRequestException(
-            `${duplicatedIds}는 같은 날짜에 IMEI가 입력되어 있거나 일련번호가 같은 데이터가 존재합니다.`,
-          );
-        }
-      } else {
-        const duplicatedItems = await this.priceSaleModel.find({
-          no: { $in: nos },
-        });
-        if (duplicatedItems.length) {
-          const duplicatedIds = duplicatedItems
-            .map((item) => item.no)
-            .join(',');
-          throw new BadRequestException(
-            `${duplicatedIds}는 일련번호가 이미 입력되어 데이터 입니다.`,
-          );
-        }
+      const imeiDuplicatedSalePrice = await this.priceSaleModel.find({
+        $or: outDateImeiObjs,
+      });
+      if (imeiDuplicatedSalePrice.length) {
+        const duplicatedIds = imeiDuplicatedSalePrice
+          .map(
+            (item) =>
+              `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
+          )
+          .join(',');
+        throw new BadRequestException(
+          `${duplicatedIds}는 같은 판매날짜에 IMEI가 입력되어 있습니다.`,
+        );
+      }
+      const noDuplicatedSalePrice = await this.priceSaleModel.find({
+        no: { $in: nos },
+      });
+      if (noDuplicatedSalePrice.length) {
+        const duplicatedIds = noDuplicatedSalePrice
+          .map((item) => item.no)
+          .join(',');
+        throw new BadRequestException(
+          `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
+        );
       }
 
       const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
