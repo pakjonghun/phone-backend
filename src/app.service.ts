@@ -24,8 +24,8 @@ import { UploadRecord } from './scheme/upload.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseService } from './purchase/purchase.service';
 import { ClientListDTO } from './dto/client.list.dto';
-import { DashboardMonthDTO } from './dto/dashboard.month.dto';
-import { MonthPageDTO } from './dto/month-page.dto';
+import { DashboardDateDTO } from './dto/dashboard.date.dto';
+import { DatePageDTO } from './dto/date-page.dto';
 
 @Injectable()
 export class AppService {
@@ -383,7 +383,7 @@ export class AppService {
     return buffer;
   }
 
-  async getMonthSale({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+  async getMonthSale({ date = Util.GetMonthAgo() }: DashboardDateDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthSale = await this.priceSaleModel.aggregate([
       {
@@ -423,12 +423,16 @@ export class AppService {
     return monthSale[0];
   }
 
-  async getTodaySale() {
+  async getTodaySale({ date = Util.GetToday() }: DashboardDateDTO) {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
+
     const todaySale = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetToday(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -461,7 +465,7 @@ export class AppService {
     return todaySale[0];
   }
 
-  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardDateDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthTopProduct = await this.priceSaleModel.aggregate([
       {
@@ -513,13 +517,16 @@ export class AppService {
     return monthTopProduct;
   }
 
-  async getTodayTopProduct() {
+  async getTodayTopProduct({ date = Util.GetToday() }: DashboardDateDTO) {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
+
     const todayTopProduct = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetToday(),
-            $lte: Util.GetTodayEnd(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -566,7 +573,7 @@ export class AppService {
 
   getMonthTopClient = async ({
     date = Util.GetMonthAgo(),
-  }: DashboardMonthDTO) => {
+  }: DashboardDateDTO) => {
     const { from, to } = Util.GetMonthRange(date);
 
     const monthTopClient = await this.priceSaleModel.aggregate([
@@ -623,13 +630,16 @@ export class AppService {
     return monthTopClient;
   };
 
-  getTodayTopClient = async () => {
+  getTodayTopClient = async ({ date = Util.GetToday() }: DashboardDateDTO) => {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
+
     const todayTopClient = await this.priceSaleModel.aggregate([
       {
         $match: {
           outDate: {
-            $gte: Util.GetToday(),
-            $lte: Util.GetTodayEnd(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -682,7 +692,7 @@ export class AppService {
     date = Util.GetMonthAgo(),
     page,
     length,
-  }: MonthPageDTO) {
+  }: DatePageDTO) {
     const filter = { lastOutDate: { $exists: true } };
     const totalCount = await this.clientModel.countDocuments(filter);
     const hasNext = page * length < totalCount;

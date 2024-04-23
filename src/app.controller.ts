@@ -27,14 +27,13 @@ import { CommonDownloadDTO } from './dto/download.sale.dto';
 import { EditDashboardDTO } from './dto/edit.dashboard.dto';
 import { EditClientDTO } from './dto/edit.client.dto';
 import { ClientListDTO } from './dto/client.list.dto';
-import { DashboardMonthDTO } from './dto/dashboard.month.dto';
-import { MonthPageDTO } from './dto/month-page.dto';
+import { DashboardDateDTO } from './dto/dashboard.date.dto';
+import { DatePageDTO } from './dto/date-page.dto';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  //
   @Post('sale/upload')
   @UseInterceptors(FileInterceptor('file', { storage }))
   async uploadSale(
@@ -88,42 +87,42 @@ export class AppController {
   }
 
   @Get('/dashboard/month-sale')
-  async getMonthSale(@Query() date: DashboardMonthDTO) {
+  async getMonthSale(@Query() date: DashboardDateDTO) {
     const result = await this.appService.getMonthSale(date);
     return result;
   }
 
   @Get('/dashboard/today-sale')
-  async getTodaySale() {
-    const result = await this.appService.getTodaySale();
+  async getTodaySale(@Query() date: DashboardDateDTO) {
+    const result = await this.appService.getTodaySale(date);
     return result;
   }
 
   @Get('/dashboard/month-product')
-  async getMonthTopProduct(@Query() date: DashboardMonthDTO) {
+  async getMonthTopProduct(@Query() date: DashboardDateDTO) {
     const result = await this.appService.getMonthTopProduct(date);
     return result;
   }
   @Get('/dashboard/today-product')
-  async getTodayTopProduct() {
-    const result = await this.appService.getTodayTopProduct();
+  async getTodayTopProduct(@Query() date: DashboardDateDTO) {
+    const result = await this.appService.getTodayTopProduct(date);
     return result;
   }
 
   @Get('/dashboard/month-client')
-  async getMonthTopClient(@Query() date: DashboardMonthDTO) {
+  async getMonthTopClient(@Query() date: DashboardDateDTO) {
     const result = await this.appService.getMonthTopClient(date);
     return result;
   }
 
   @Get('/dashboard/today-client')
-  async getTodayTopClient() {
-    const result = await this.appService.getTodayTopClient();
+  async getTodayTopClient(@Query() date: DashboardDateDTO) {
+    const result = await this.appService.getTodayTopClient(date);
     return result;
   }
 
   @Get('/dashboard/visit-client')
-  async getVisitClient(@Query() query: MonthPageDTO) {
+  async getVisitClient(@Query() query: DatePageDTO) {
     const result = await this.appService.getVisitClient(query);
     return result;
   }

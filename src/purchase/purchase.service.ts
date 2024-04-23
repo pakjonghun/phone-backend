@@ -22,7 +22,7 @@ import { UploadPurchaseRecord } from 'src/scheme/upload.purchase.record';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Client } from 'src/scheme/client.scheme';
 import { ClientListDTO } from 'src/dto/client.list.dto';
-import { DashboardMonthDTO } from 'src/dto/dashboard.month.dto';
+import { DashboardDateDTO } from 'src/dto/dashboard.date.dto';
 
 @Injectable()
 export class PurchaseService {
@@ -325,7 +325,7 @@ export class PurchaseService {
     return buffer;
   }
 
-  async getMonthPurchase({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+  async getMonthPurchase({ date = Util.GetMonthAgo() }: DashboardDateDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthSale = await this.purchaseModel.aggregate([
       {
@@ -348,12 +348,15 @@ export class PurchaseService {
     return monthSale[0];
   }
 
-  async getTodayPurchase() {
+  async getTodayPurchase({ date = Util.GetToday() }: DashboardDateDTO) {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
     const todaySale = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetToday(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -369,7 +372,7 @@ export class PurchaseService {
     return todaySale[0];
   }
 
-  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+  async getMonthTopProduct({ date = Util.GetMonthAgo() }: DashboardDateDTO) {
     const { from, to } = Util.GetMonthRange(date);
     const monthTopProduct = await this.purchaseModel.aggregate([
       {
@@ -411,13 +414,15 @@ export class PurchaseService {
     return monthTopProduct;
   }
 
-  async getTodayTopProduct() {
+  async getTodayTopProduct({ date }: DashboardDateDTO) {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
     const todayTopProduct = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetToday(),
-            $lte: Util.GetTodayEnd(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -454,7 +459,7 @@ export class PurchaseService {
 
   getMonthTopClient = async ({
     date = Util.GetMonthAgo(),
-  }: DashboardMonthDTO) => {
+  }: DashboardDateDTO) => {
     //
     const { from, to } = Util.GetMonthRange(date);
     const monthTopClient = await this.purchaseModel.aggregate([
@@ -497,13 +502,15 @@ export class PurchaseService {
     return monthTopClient;
   };
 
-  getTodayTopClient = async () => {
+  getTodayTopClient = async ({ date }: DashboardDateDTO) => {
+    const startDate = dayjs(date).startOf('day').format('YYYYMMDDHHmmss');
+    const endDate = dayjs(date).endOf('day').format('YYYYMMDDHHmmss');
     const todayTopClient = await this.purchaseModel.aggregate([
       {
         $match: {
           inDate: {
-            $gte: Util.GetToday(),
-            $lte: Util.GetTodayEnd(),
+            $gte: startDate,
+            $lte: endDate,
           },
         },
       },
@@ -535,10 +542,11 @@ export class PurchaseService {
         },
       },
     ]);
+
     return todayTopClient;
   };
 
-  async getVisitClient({ date = Util.GetMonthAgo() }: DashboardMonthDTO) {
+  async getVisitClient({ date = Util.GetMonthAgo() }: DashboardDateDTO) {
     const notVisitedOutClient = await this.purchaseClientModel
       .find({ lastInDate: { $exists: true } })
       .sort({ lastInDate: 1, _id: 1 })
