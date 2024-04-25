@@ -68,16 +68,11 @@ export class PurchaseService {
         let value =
           typeof cell.value == 'string' ? cell.value.trim() : cell.value;
         if (fieldName.toLowerCase().includes('date')) {
+          const dateErrorMessage = `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`;
           if (!Util.ValidDateFormat(value.toString())) {
-            throw new BadRequestException(
-              `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
-            );
+            throw new BadRequestException(dateErrorMessage);
           }
-
-          value = Util.GetDateString(
-            value.toString(),
-            `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`,
-          );
+          value = Util.GetDateString(value.toString(), dateErrorMessage);
         }
 
         if (fieldName === 'product') {

@@ -3,6 +3,7 @@ import * as dayjs from 'dayjs';
 
 export class Util {
   static IsDate(date: string) {
+    console.log('util date', date);
     const isValid = dayjs(date).isValid();
     return isValid;
   }
