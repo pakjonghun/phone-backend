@@ -3,12 +3,16 @@ import * as dayjs from 'dayjs';
 
 export class Util {
   static IsDate(date: string) {
-    console.log('util date', date);
+    console.dir(date, { depth: 10 });
     const isValid = dayjs(date).isValid();
     return isValid;
   }
 
   static GetDateString(date: string, errorMsg?: string) {
+    if (typeof date === 'object' && (date as unknown) instanceof Date) {
+      date = dayjs(date).format('YYYY-MM-DD');
+    }
+
     const isDate = Util.IsDate(date);
     if (!isDate)
       throw new BadRequestException(

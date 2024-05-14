@@ -79,6 +79,8 @@ export class AppService {
           let value =
             typeof cell.value == 'string' ? cell.value.trim() : cell.value;
           if (fieldName.toLowerCase().includes('date')) {
+            const t = typeof value;
+            console.log('sale type, value', t, value);
             const dateErrorMessage = `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`;
             if (!value) {
               throw new BadRequestException(dateErrorMessage);

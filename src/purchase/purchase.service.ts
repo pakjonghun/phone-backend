@@ -69,9 +69,14 @@ export class PurchaseService {
           typeof cell.value == 'string' ? cell.value.trim() : cell.value;
         if (fieldName.toLowerCase().includes('date')) {
           const dateErrorMessage = `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`;
+
+          const t = typeof value;
+          console.log('purchase type, value', t, value);
+
           if (!Util.ValidDateFormat(value.toString())) {
             throw new BadRequestException(dateErrorMessage);
           }
+
           value = Util.GetDateString(value.toString(), dateErrorMessage);
         }
 
