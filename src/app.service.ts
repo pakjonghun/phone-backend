@@ -57,8 +57,8 @@ export class AppService {
     const newDocument = [];
     const newPriceSaleDocument = [];
     let rowCount = 0;
-    for await (const sheet of stream) {
-      for await (const row of sheet) {
+    for await (const { value } of stream.parse() as any) {
+      for await (const row of value) {
         if (!row.hasValues) continue;
         if (rowCount == 0) {
           rowCount++;
