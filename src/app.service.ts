@@ -73,6 +73,7 @@ export class AppService {
 
         for await (const length of columnArray) {
           const cell = row.getCell(length);
+          console.log('test value', cell.value);
           const fieldName = this.saleExcelMapper[length] as string;
           if (!fieldName) continue;
           const target = newSale.schema.path(fieldName)!;
