@@ -7,7 +7,9 @@
 ### 사용기술
 - front : nextjs, react, materialUI, react-query
 - backend : mongodb, nestjs
-- devops : aws beanstalk, aws cloudfront, aws amplify
+- devops & deploy :
+  - 실배포 : aws beanstalk, aws cloudfront, aws amplify, aws codepipeline
+  - 테스트 배포 : vercel, heroku
 
 ### 주안점
 - 편의성
