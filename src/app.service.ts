@@ -51,265 +51,260 @@ export class AppService {
 
     const productSet = new Set<string>();
     const clientMap = new Map<string, string>();
-    const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {
-      sharedStrings: 'cache',
-    });
+    // const stream = new ExcelJS.stream.xlsx.WorkbookReader(uploadFile.path, {
+    //   sharedStrings: 'cache',
+    // });
     const newDocument = [];
     const newPriceSaleDocument = [];
     let rowCount = 0;
-    for await (const { value } of stream.parse() as any) {
-      for await (const row of value) {
-        if (!row.hasValues) continue;
-        if (rowCount == 0) {
-          rowCount++;
-          continue;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = await workbook.xlsx.readFile(uploadFile.path);
+    const fistSheet = worksheet.getWorksheet(1);
+
+    fistSheet.eachRow((row) => {
+      if (!row.hasValues) return;
+      if (rowCount == 0) {
+        rowCount++;
+        return;
+      }
+
+      const newSale = new this.saleModel();
+      const newPriceSale = new this.priceSaleModel();
+
+      row.eachCell((cell, cellIndex) => {
+        const length = cellIndex;
+        const fieldName = this.saleExcelMapper[length] as string;
+        if (!fieldName) return;
+        const target = newSale.schema.path(fieldName)!;
+        let value =
+          typeof cell.value == 'string' ? cell.value.trim() : cell.value;
+        if (fieldName.toLowerCase().includes('date')) {
+          const t = typeof value;
+          console.log('sale type, value', t, value);
+          const dateErrorMessage = `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`;
+          if (!value) {
+            throw new BadRequestException(dateErrorMessage);
+          }
+
+          value = Util.GetDateString(value.toString(), dateErrorMessage);
         }
 
-        const newSale = new this.saleModel();
-        const newPriceSale = new this.priceSaleModel();
-
-        const columnArray = Array.from(
-          { length: row.cellCount },
-          (_, k) => k + 1,
-        );
-
-        for await (const length of columnArray) {
-          const cell = row.getCell(length);
-          console.log('test value', cell.value);
-          const fieldName = this.saleExcelMapper[length] as string;
-          if (!fieldName) continue;
-          const target = newSale.schema.path(fieldName)!;
-          let value =
-            typeof cell.value == 'string' ? cell.value.trim() : cell.value;
-          if (fieldName.toLowerCase().includes('date')) {
-            const t = typeof value;
-            console.log('sale type, value', t, value);
-            const dateErrorMessage = `엑셀 파일에 ${cell.$col$row}위치에 올바른 날짜형식을 입력해 주세요.`;
-            if (!value) {
-              throw new BadRequestException(dateErrorMessage);
-            }
-
-            value = Util.GetDateString(value.toString(), dateErrorMessage);
-          }
-
-          if (fieldName === 'product') {
-            if (!value) {
-              throw new BadRequestException(
-                `엑셀 파일에 ${cell.$col$row}위치에 제품 이름이 입력되지 않았습니다.`,
-              );
-            }
-            const modelNumber = value as string;
-            productSet.add(modelNumber);
-          }
-
-          if (fieldName.toLowerCase() === 'outClient') {
-            const stringValue = value as string;
-            if (!clientMap.has(stringValue)) {
-              clientMap.set(stringValue, '');
-            }
-          }
-
-          newSale[fieldName as string] = value;
-
-          const isExist = newPriceSale.schema.path(fieldName);
-          if (isExist) newPriceSale[fieldName] = value;
-
-          const isValid = newSale.$isValid(fieldName);
-
-          if (!isValid) {
+        if (fieldName === 'product') {
+          if (!value) {
             throw new BadRequestException(
-              `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. ${target.instance}타입의 값으로 바꾸어 주세요`,
+              `엑셀 파일에 ${cell.$col$row}위치에 제품 이름이 입력되지 않았습니다.`,
             );
           }
+          const modelNumber = value as string;
+          productSet.add(modelNumber);
         }
 
-        newSale.uploadId = recordDoc._id as string;
-        newPriceSale.uploadId = recordDoc._id as string;
-        await newSale.validate();
-        await newPriceSale.validate();
-        const obj = newSale.toObject();
-        const priceObj = newPriceSale.toObject();
-        newDocument.push(obj);
-        newPriceSaleDocument.push(priceObj);
-
-        const outDate = newSale.outDate as string;
-        const outClient = newSale.outClient as unknown as string;
-        const existOutDate = clientMap.get(outClient);
-        if (!existOutDate) {
-          clientMap.set(outClient, outDate);
-        }
-
-        if (existOutDate) {
-          const isOutDateLastest = dayjs(outDate).isAfter(dayjs(existOutDate));
-          if (isOutDateLastest) {
-            clientMap.set(outClient, outDate);
+        if (fieldName.toLowerCase() === 'outClient') {
+          const stringValue = value as string;
+          if (!clientMap.has(stringValue)) {
+            clientMap.set(stringValue, '');
           }
         }
-      }
 
-      if (newDocument.length === 0) {
-        throw new BadRequestException('입력 가능한 데이터가 없습니다.');
-      }
+        newSale[fieldName as string] = value;
 
-      const bothKeyNull = newDocument.some(
-        (item) => item.no == null && item.imei == null,
-      );
-      if (bothKeyNull) {
-        throw new BadRequestException(
-          '엑셀파일에 IMEI와 일련번호가 모두 입력되지 않은 데이터가 있습니다.',
-        );
-      }
+        const isExist = newPriceSale.schema.path(fieldName);
+        if (isExist) newPriceSale[fieldName] = value;
 
-      const outDateImei = newDocument
-        .filter((item) => !!item.imei)
-        .map((item) => `${item.outDate}_${item.imei}`);
+        const isValid = newSale.$isValid(fieldName);
 
-      const nos = newDocument.map((item) => item.no).filter((item) => !!item);
-      const hasSameNo = nos.length !== new Set(nos).size;
-      const hasSameId = outDateImei.length !== new Set(outDateImei).size;
-      if (hasSameId) {
-        throw new BadRequestException(
-          '엑셀파일에 같은 판매일에 같은 IMEI가 입력되어 있습니다. 같은 판매일에 중복되는 IMEI 제거해주세요.',
-        );
-      }
-
-      if (hasSameNo) {
-        throw new BadRequestException(
-          '엑셀파일에 같은 일련번호가 입력되어 있습니다. 중복되는 일련번호를 제거해주세요.',
-        );
-      }
-
-      const outDateImeiObjs = newDocument
-        .filter((item) => !!item.imei)
-        .map((item) => ({
-          imei: item.imei,
-          outDate: item.outDate,
-        }));
-
-      const imeiDuplicatedItems = await this.saleModel.find({
-        $or: outDateImeiObjs,
-      });
-      if (imeiDuplicatedItems.length) {
-        const duplicatedIds = imeiDuplicatedItems
-          .map(
-            (item) =>
-              `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
-          )
-          .join(',');
-        throw new BadRequestException(
-          `${duplicatedIds}는 같은 판매날짜에 IMEI가 이미 입력되어 있습니다.`,
-        );
-      }
-      const duplicatedNos = await this.saleModel.find({
-        no: { $in: nos },
-      });
-      if (duplicatedNos.length) {
-        const duplicatedIds = duplicatedNos.map((item) => item.no).join(',');
-        throw new BadRequestException(
-          `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
-        );
-      }
-
-      const imeiDuplicatedSalePrice = await this.priceSaleModel.find({
-        $or: outDateImeiObjs,
-      });
-      if (imeiDuplicatedSalePrice.length) {
-        const duplicatedIds = imeiDuplicatedSalePrice
-          .map(
-            (item) =>
-              `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
-          )
-          .join(',');
-        throw new BadRequestException(
-          `${duplicatedIds}는 같은 판매날짜에 IMEI가 입력되어 있습니다.`,
-        );
-      }
-      const noDuplicatedSalePrice = await this.priceSaleModel.find({
-        no: { $in: nos },
-      });
-      if (noDuplicatedSalePrice.length) {
-        const duplicatedIds = noDuplicatedSalePrice
-          .map((item) => item.no)
-          .join(',');
-        throw new BadRequestException(
-          `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
-        );
-      }
-
-      const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
-      const existClients = await this.clientModel.find({
-        _id: { $in: clientIds },
-      });
-
-      const existClientList = new Map();
-      const notExistClientList = new Map();
-
-      clientMap.forEach((value, key) => {
-        const existClientIndex = existClients.findIndex(
-          (item) => item._id === key,
-        );
-        if (existClientIndex == -1) {
-          notExistClientList.set(key, value);
-        } else {
-          existClientList.set(key, value);
+        if (!isValid) {
+          throw new BadRequestException(
+            `엑셀 파일에 ${cell.$col$row}위치의 ${fieldName}의 값인 ${value}은 잘못된 형식의 값 입니다. ${target.instance}타입의 값으로 바꾸어 주세요`,
+          );
         }
       });
 
-      const insertClientList = Array.from(notExistClientList).map(
-        ([_id, lastOutDate]) =>
-          new this.clientModel({
-            _id,
-            lastOutDate,
-            uploadId: recordDoc._id as mongoose.Types.ObjectId,
-            backupLastOutDate: [],
-          }),
-      );
+      newSale.uploadId = recordDoc._id as string;
+      newPriceSale.uploadId = recordDoc._id as string;
+      newSale.validateSync();
+      newPriceSale.validateSync();
+      const obj = newSale.toObject();
+      const priceObj = newPriceSale.toObject();
+      newDocument.push(obj);
+      newPriceSaleDocument.push(priceObj);
 
-      await this.clientModel.insertMany(insertClientList);
-      await this.clientModel.bulkWrite(
-        Array.from(existClientList).map(([clientId, lastOutDate]) => ({
-          updateOne: {
-            filter: { _id: clientId, lastOutDate: { $lt: lastOutDate } },
-            update: [
-              {
-                $set: {
-                  backupLastOutDate: {
-                    $concatArrays: ['$backupLastOutDate', ['$lastOutDate']],
-                  },
-                },
-              },
-              {
-                $set: {
-                  backupUploadId: {
-                    $concatArrays: ['$backupUploadId', ['$uploadId']],
-                  },
-                },
-              },
-              {
-                $set: {
-                  uploadId: recordDoc._id as mongoose.Types.ObjectId,
-                  lastOutDate,
-                },
-              },
-            ],
-          },
-        })),
-      );
+      const outDate = newSale.outDate as string;
+      const outClient = newSale.outClient as unknown as string;
+      const existOutDate = clientMap.get(outClient);
+      if (!existOutDate) {
+        clientMap.set(outClient, outDate);
+      }
 
-      await this.saleModel.bulkWrite(
-        newDocument.map((document) => ({
-          insertOne: { document },
-        })),
-      );
+      if (existOutDate) {
+        const isOutDateLastest = dayjs(outDate).isAfter(dayjs(existOutDate));
+        if (isOutDateLastest) {
+          clientMap.set(outClient, outDate);
+        }
+      }
+    });
 
-      await this.priceSaleModel.bulkWrite(
-        newPriceSaleDocument.map((document) => ({
-          insertOne: { document },
-        })),
-      );
-
-      break;
+    if (newDocument.length === 0) {
+      throw new BadRequestException('입력 가능한 데이터가 없습니다.');
     }
+
+    const bothKeyNull = newDocument.some(
+      (item) => item.no == null && item.imei == null,
+    );
+    if (bothKeyNull) {
+      throw new BadRequestException(
+        '엑셀파일에 IMEI와 일련번호가 모두 입력되지 않은 데이터가 있습니다.',
+      );
+    }
+
+    const outDateImei = newDocument
+      .filter((item) => !!item.imei)
+      .map((item) => `${item.outDate}_${item.imei}`);
+
+    const nos = newDocument.map((item) => item.no).filter((item) => !!item);
+    const hasSameNo = nos.length !== new Set(nos).size;
+    const hasSameId = outDateImei.length !== new Set(outDateImei).size;
+    if (hasSameId) {
+      throw new BadRequestException(
+        '엑셀파일에 같은 판매일에 같은 IMEI가 입력되어 있습니다. 같은 판매일에 중복되는 IMEI 제거해주세요.',
+      );
+    }
+
+    if (hasSameNo) {
+      throw new BadRequestException(
+        '엑셀파일에 같은 일련번호가 입력되어 있습니다. 중복되는 일련번호를 제거해주세요.',
+      );
+    }
+
+    const outDateImeiObjs = newDocument
+      .filter((item) => !!item.imei)
+      .map((item) => ({
+        imei: item.imei,
+        outDate: item.outDate,
+      }));
+
+    const imeiDuplicatedItems = await this.saleModel.find({
+      $or: outDateImeiObjs,
+    });
+    if (imeiDuplicatedItems.length) {
+      const duplicatedIds = imeiDuplicatedItems
+        .map(
+          (item) =>
+            `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
+        )
+        .join(',');
+      throw new BadRequestException(
+        `${duplicatedIds}는 같은 판매날짜에 IMEI가 이미 입력되어 있습니다.`,
+      );
+    }
+    const duplicatedNos = await this.saleModel.find({
+      no: { $in: nos },
+    });
+    if (duplicatedNos.length) {
+      const duplicatedIds = duplicatedNos.map((item) => item.no).join(',');
+      throw new BadRequestException(
+        `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
+      );
+    }
+
+    const imeiDuplicatedSalePrice = await this.priceSaleModel.find({
+      $or: outDateImeiObjs,
+    });
+    if (imeiDuplicatedSalePrice.length) {
+      const duplicatedIds = imeiDuplicatedSalePrice
+        .map(
+          (item) =>
+            `${dayjs(item.outDate).format('YYYY-MM-DD')}날짜에 저장된 imei 가 ${item.imei}인 ${item.product}제품`,
+        )
+        .join(',');
+      throw new BadRequestException(
+        `${duplicatedIds}는 같은 판매날짜에 IMEI가 입력되어 있습니다.`,
+      );
+    }
+    const noDuplicatedSalePrice = await this.priceSaleModel.find({
+      no: { $in: nos },
+    });
+    if (noDuplicatedSalePrice.length) {
+      const duplicatedIds = noDuplicatedSalePrice
+        .map((item) => item.no)
+        .join(',');
+      throw new BadRequestException(
+        `일련번호 ${duplicatedIds}는 이미 입력되어 일련번호 입니다.`,
+      );
+    }
+
+    const clientIds = Array.from(clientMap).map(([clientId]) => clientId);
+    const existClients = await this.clientModel.find({
+      _id: { $in: clientIds },
+    });
+
+    const existClientList = new Map();
+    const notExistClientList = new Map();
+
+    clientMap.forEach((value, key) => {
+      const existClientIndex = existClients.findIndex(
+        (item) => item._id === key,
+      );
+      if (existClientIndex == -1) {
+        notExistClientList.set(key, value);
+      } else {
+        existClientList.set(key, value);
+      }
+    });
+
+    const insertClientList = Array.from(notExistClientList).map(
+      ([_id, lastOutDate]) =>
+        new this.clientModel({
+          _id,
+          lastOutDate,
+          uploadId: recordDoc._id as mongoose.Types.ObjectId,
+          backupLastOutDate: [],
+        }),
+    );
+
+    await this.clientModel.insertMany(insertClientList);
+    await this.clientModel.bulkWrite(
+      Array.from(existClientList).map(([clientId, lastOutDate]) => ({
+        updateOne: {
+          filter: { _id: clientId, lastOutDate: { $lt: lastOutDate } },
+          update: [
+            {
+              $set: {
+                backupLastOutDate: {
+                  $concatArrays: ['$backupLastOutDate', ['$lastOutDate']],
+                },
+              },
+            },
+            {
+              $set: {
+                backupUploadId: {
+                  $concatArrays: ['$backupUploadId', ['$uploadId']],
+                },
+              },
+            },
+            {
+              $set: {
+                uploadId: recordDoc._id as mongoose.Types.ObjectId,
+                lastOutDate,
+              },
+            },
+          ],
+        },
+      })),
+    );
+
+    await this.saleModel.bulkWrite(
+      newDocument.map((document) => ({
+        insertOne: { document },
+      })),
+    );
+
+    await this.priceSaleModel.bulkWrite(
+      newPriceSaleDocument.map((document) => ({
+        insertOne: { document },
+      })),
+    );
 
     await this.unlinkExcelFile(uploadFile.path);
   }
